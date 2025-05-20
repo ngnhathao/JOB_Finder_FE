@@ -1,18 +1,89 @@
-import Link from "next/link";
-import LoginWithSocial from "./LoginWithSocial";
+'use client'
 
-const FormContent = () => {
+import Link from "next/link";
+import LoginWithSocial from "../shared/LoginWithSocial";
+import { authService } from "@/services/authService";
+import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useDispatch } from 'react-redux';
+import { setLoginState } from '@/features/auth/authSlice';
+
+const FormContent = ({ isPopup = false }) => {
+  const router = useRouter();
+  const dispatch = useDispatch();
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const closeBtnRef = useRef(null); // Ref cho nút đóng modal
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const responseData = await authService.login(formData.email, formData.password);
+      
+      dispatch(setLoginState({ isLoggedIn: true, user: responseData.name, role: responseData.role }));
+
+      // Kích hoạt nút đóng modal nếu là popup
+      if (isPopup && closeBtnRef.current) {
+          closeBtnRef.current.click();
+      }
+
+      // Chuyển hướng dựa trên role sau khi đăng nhập thành công
+      const userRole = authService.getRole();
+      switch (userRole) {
+        case 'Admin':
+          router.push('/admin-dashboard'); // Vẫn chuyển Admin đến dashboard riêng (nếu có)
+          break;
+        case 'Employer':
+        case 'User': // Hoặc 'Candidate'
+        default:
+          // Sau khi login thành công, refresh trang hiện tại để cập nhật UI
+          router.refresh();
+          // Không cần push '/' nữa nếu modal đã đóng và refresh trang hiện tại
+          break;
+      }
+
+    } catch (error) {
+      setError(error.message || 'Invalid email or password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="form-inner">
       <h3>Login to Superio</h3>
 
+      {error && <div className="alert alert-danger">{error}</div>}
+
       {/* <!--Login Form--> */}
-      <form method="post">
+      <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>Username</label>
-          <input type="text" name="username" placeholder="Username" required />
+          <label>Email Address</label>
+          <input 
+            type="email" 
+            name="email" 
+            placeholder="Email" 
+            required 
+            value={formData.email}
+            onChange={handleChange}
+          />
         </div>
-        {/* name */}
+        {/* email */}
 
         <div className="form-group">
           <label>Password</label>
@@ -21,6 +92,8 @@ const FormContent = () => {
             name="password"
             placeholder="Password"
             required
+            value={formData.password}
+            onChange={handleChange}
           />
         </div>
         {/* password */}
@@ -45,25 +118,34 @@ const FormContent = () => {
             className="theme-btn btn-style-one"
             type="submit"
             name="log-in"
+            disabled={loading}
           >
-            Log In
+            {loading ? 'Logging in...' : 'Log In'}
           </button>
         </div>
         {/* login */}
+
+        {/* Nút ẩn để đóng modal */}
+        {isPopup && <button ref={closeBtnRef} data-bs-dismiss="modal" style={{ display: 'none' }}></button>}
+
       </form>
       {/* End form */}
 
       <div className="bottom-box">
         <div className="text">
           Don&apos;t have an account?{" "}
-          <Link
-            href="#"
-            className="call-modal signup"
-            data-bs-toggle="modal"
-            data-bs-target="#registerModal"
-          >
-            Signup
-          </Link>
+          {isPopup ? (
+            <Link
+              href="#"
+              className="call-modal signup"
+              data-bs-toggle="modal"
+              data-bs-target="#registerModal"
+            >
+              Signup
+            </Link>
+          ) : (
+            <Link href="/register">Signup</Link>
+          )}
         </div>
 
         <div className="divider">

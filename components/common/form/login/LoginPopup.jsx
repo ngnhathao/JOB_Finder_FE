@@ -1,5 +1,8 @@
+'use client'
+
 import Register from "../register/Register";
 import FormContent from "./FormContent";
+import { useEffect } from "react";
 
 const LoginPopup = () => {
   return (
@@ -19,7 +22,7 @@ const LoginPopup = () => {
               <div id="login-modal">
                 {/* <!-- Login Form --> */}
                 <div className="login-form default-form">
-                  <FormContent />
+                  <FormContent isPopup={true} />
                 </div>
                 {/* <!--End Login Form --> */}
               </div>
@@ -47,7 +50,7 @@ const LoginPopup = () => {
               <div id="login-modal">
                 {/* <!-- Login Form --> */}
                 <div className="login-form default-form">
-                  <Register />
+                  <Register isPopup={true} />
                 </div>
                 {/* <!--End Login Form --> */}
               </div>

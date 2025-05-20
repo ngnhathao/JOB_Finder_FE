@@ -8,10 +8,7 @@ import { Provider } from "react-redux";
 import { store } from "../store/store";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
-
-if (typeof window !== "undefined") {
-  require("bootstrap/dist/js/bootstrap");
-}
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 export default function RootLayout({ children }) {
   useEffect(() => {
@@ -19,7 +16,10 @@ export default function RootLayout({ children }) {
       duration: 1400,
       once: true,
     });
+    // Import Bootstrap JS only on client side
+    require("bootstrap/dist/js/bootstrap");
   }, []);
+
   return (
     <html lang="en">
       <head>

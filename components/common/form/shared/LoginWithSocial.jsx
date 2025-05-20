@@ -15,4 +15,4 @@ const LoginWithSocial = () => {
   );
 };
 
-export default LoginWithSocial;
+export default LoginWithSocial; 

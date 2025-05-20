@@ -31,14 +31,20 @@ export const authService = {
     }
   },
 
-  async register(email, password, role) {
+  async register(fullName, email, phone, password) {
     try {
       const response = await fetch(`${API_URL}/Auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password, role }),
+        body: JSON.stringify({ 
+          fullName,
+          email,
+          phone,
+          password,
+          role: '3' // Set default role as user
+        }),
       });
 
       if (!response.ok) {
@@ -46,7 +52,9 @@ export const authService = {
         throw new Error(errorData.message || 'Registration failed');
       }
 
-      const data = await response.json();
+      // Assuming successful registration returns plain text, not JSON
+      const data = await response.text(); 
+      console.log('Registration successful:', data); // Log the success message
       return data;
     } catch (error) {
       throw error;

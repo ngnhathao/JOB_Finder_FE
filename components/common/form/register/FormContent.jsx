@@ -3,11 +3,14 @@
 import { useState } from 'react';
 import { authService } from '@/services/authService';
 import { useRouter } from 'next/navigation';
+import { toast } from 'react-toastify';
 
-const FormContent = ({ role }) => {
+const FormContent = ({ onRegistrationSuccess }) => {
   const router = useRouter();
   const [formData, setFormData] = useState({
+    fullName: '',
     email: '',
+    phone: '',
     password: ''
   });
   const [error, setError] = useState('');
@@ -27,11 +30,24 @@ const FormContent = ({ role }) => {
     setLoading(true);
 
     try {
-      await authService.register(formData.email, formData.password, role);
-      // Chuyển hướng đến trang đăng nhập sau khi đăng ký thành công
-      router.push('/login');
+      await authService.register(
+        formData.fullName,
+        formData.email,
+        formData.phone,
+        formData.password
+      );
+
+      console.log('Registration successful in FormContent.');
+      toast.success('Registration successful!');
+
+      if (onRegistrationSuccess) {
+        onRegistrationSuccess();
+      } else {
+        // Redirect to login page after successful registration (default behavior)
+        router.push('/LoginPopup');
+      }
     } catch (error) {
-      setError('Registration failed. Please try again.');
+      setError(error.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -42,11 +58,24 @@ const FormContent = ({ role }) => {
       {error && <div className="alert alert-danger">{error}</div>}
       
       <div className="form-group">
+        <label>Full Name</label>
+        <input 
+          type="text" 
+          name="fullName" 
+          placeholder="Enter your full name" 
+          required 
+          value={formData.fullName}
+          onChange={handleChange}
+        />
+      </div>
+      {/* fullName */}
+
+      <div className="form-group">
         <label>Email Address</label>
         <input 
           type="email" 
           name="email" 
-          placeholder="Email" 
+          placeholder="Enter your email" 
           required 
           value={formData.email}
           onChange={handleChange}
@@ -55,12 +84,25 @@ const FormContent = ({ role }) => {
       {/* email */}
 
       <div className="form-group">
+        <label>Phone Number</label>
+        <input 
+          type="tel" 
+          name="phone" 
+          placeholder="Enter your phone number" 
+          required 
+          value={formData.phone}
+          onChange={handleChange}
+        />
+      </div>
+      {/* phone */}
+
+      <div className="form-group">
         <label>Password</label>
         <input
           id="password-field"
           type="password"
           name="password"
-          placeholder="Password"
+          placeholder="Enter your password"
           required
           value={formData.password}
           onChange={handleChange}

@@ -1,17 +1,23 @@
-
 'use client'
 
 import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
-import LoginWithSocial from "./LoginWithSocial";
+import LoginWithSocial from "../shared/LoginWithSocial";
 import Form from "./FormContent";
 import Link from "next/link";
+import { useState } from "react";
 
-const Register = () => {
+const Register = ({ isPopup = false }) => {
+  const [selectedRole, setSelectedRole] = useState('Candidate');
+
+  const handleTabSelect = (index) => {
+    setSelectedRole(index === 0 ? 'Candidate' : 'Employer');
+  };
+
   return (
     <div className="form-inner">
       <h3>Create a Free Superio Account</h3>
 
-      <Tabs>
+      <Tabs onSelect={handleTabSelect}>
         <div className="form-group register-dual">
           <TabList className="btn-box row">
             <Tab className="col-lg-6 col-md-12">
@@ -30,12 +36,12 @@ const Register = () => {
         {/* End .form-group */}
 
         <TabPanel>
-          <Form />
+          <Form role={selectedRole} />
         </TabPanel>
         {/* End cadidates Form */}
 
         <TabPanel>
-          <Form />
+          <Form role={selectedRole} />
         </TabPanel>
         {/* End Employer Form */}
       </Tabs>
@@ -44,15 +50,21 @@ const Register = () => {
       <div className="bottom-box">
         <div className="text">
           Already have an account?{" "}
-          <Link
-            href="#"
-            className="call-modal login"
-            data-bs-toggle="modal"
-            data-bs-dismiss="modal"
-            data-bs-target="#loginPopupModal"
-          >
-            LogIn
-          </Link>
+          {isPopup ? (
+            <Link
+              href="#"
+              className="call-modal login"
+              data-bs-toggle="modal"
+              data-bs-dismiss="modal"
+              data-bs-target="#loginPopupModal"
+            >
+              LogIn
+            </Link>
+          ) : (
+            <Link href="/login" className="call-modal login">
+              LogIn
+            </Link>
+          )}
         </div>
         <div className="divider">
           <span>or</span>

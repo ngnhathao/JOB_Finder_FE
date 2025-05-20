@@ -17,8 +17,8 @@ const mainLinks = [
   { name: "Find Jobs", route: findJobItems[0]?.items[0]?.routePath || "/" },
   { name: "Employers", route: employerItems[0]?.items[0]?.routePath || "/" },
   { name: "Candidates", route: candidateItems[0]?.items[0]?.routePath || "/" },
-  { name: "Blog", route: blogItems[0]?.routePath || "/" },
-  { name: "Pages", route: pageItems[0]?.routePath || "/" },
+  // { name: "Blog", route: blogItems[0]?.routePath || "/" },
+  // { name: "Pages", route: pageItems[0]?.routePath || "/" },
 ];
 
 const HeaderNavContent = () => {

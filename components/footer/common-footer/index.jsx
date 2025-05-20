@@ -1,5 +1,5 @@
 import Image from "next/image";
-import CopyrightFooter from "./CopyrightFooter";
+// import CopyrightFooter from "./CopyrightFooter";
 import FooterContent from "./FooterContent";
 
 const index = ({ footerStyle = "" }) => {
@@ -47,8 +47,6 @@ const index = ({ footerStyle = "" }) => {
       </div>
       {/* End auto-container */}
 
-      <CopyrightFooter />
-      {/* <!--Bottom--> */}
     </footer>
     //   {/* <!-- End Main Footer --> */}
   );

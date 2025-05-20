@@ -4,73 +4,9 @@ module.exports = [
     label: "Home",
     items: [
       {
-        name: "Home Page 01",
+        name: "Home Page",
         routePath: "/",
-      },
-      {
-        name: "Home Page 02",
-        routePath: "/home-2",
-      },
-      {
-        name: "Home Page 03",
-        routePath: "/home-3",
-      },
-      {
-        name: "Home Page 04",
-        routePath: "/home-4",
-      },
-      {
-        name: "Home Page 05",
-        routePath: "/home-5",
-      },
-      {
-        name: "Home Page 06",
-        routePath: "/home-6",
-      },
-      {
-        name: "Home Page 07",
-        routePath: "/home-7",
-      },
-      {
-        name: "Home Page 08",
-        routePath: "/home-8",
-      },
-      {
-        name: "Home Page 09",
-        routePath: "/home-9",
-      },
-      {
-        name: "Home Page 10",
-        routePath: "/home-10",
-      },
-      {
-        name: "Home Page 11",
-        routePath: "/home-11",
-      },
-      {
-        name: "Home Page 12",
-        routePath: "/home-12",
-      },
-      {
-        name: "Home Page 13",
-        routePath: "/home-13",
-      },
-      {
-        name: "Home Page 14",
-        routePath: "/home-14",
-      },
-      {
-        name: "Home Page 15",
-        routePath: "/home-15",
-      },
-      {
-        name: "Home Page 16",
-        routePath: "/home-16",
-      },
-      {
-        name: "Home Page 17",
-        routePath: "/home-17",
-      },
+      }
     ],
   },
   {
@@ -78,60 +14,8 @@ module.exports = [
     label: "Job Listing",
     items: [
       {
-        name: "Job List V1",
+        name: "Job List",
         routePath: "/job-list-v1",
-      },
-      {
-        name: "Job List V2",
-        routePath: "/job-list-v2",
-      },
-      {
-        name: "Job List V3",
-        routePath: "/job-list-v3",
-      },
-      {
-        name: "Job List V4",
-        routePath: "/job-list-v4",
-      },
-      {
-        name: "Job List V5",
-        routePath: "/job-list-v5",
-      },
-      {
-        name: "Job List V6",
-        routePath: "/job-list-v6",
-      },
-      {
-        name: "Job List V7",
-        routePath: "/job-list-v7",
-      },
-      {
-        name: "Job List V8",
-        routePath: "/job-list-v8",
-      },
-      {
-        name: "Job List V9",
-        routePath: "/job-list-v9",
-      },
-      {
-        name: "Job List V10",
-        routePath: "/job-list-v10",
-      },
-      {
-        name: "Job List V11",
-        routePath: "/job-list-v11",
-      },
-      {
-        name: "Job List V12",
-        routePath: "/job-list-v12",
-      },
-      {
-        name: "Job List V13",
-        routePath: "/job-list-v13",
-      },
-      {
-        name: "Job List V14",
-        routePath: "/job-list-v14",
       },
     ],
   },
@@ -140,24 +24,8 @@ module.exports = [
     label: "Job Single",
     items: [
       {
-        name: "Job Single V1",
-        routePath: "/job-single-v1/1",
-      },
-      {
-        name: "Job Single V2",
-        routePath: "/job-single-v2/2",
-      },
-      {
-        name: "Job Single V3",
+        name: "Job Single",
         routePath: "/job-single-v3/3",
-      },
-      {
-        name: "Job Single V4",
-        routePath: "/job-single-v4/4",
-      },
-      {
-        name: "Job Single V5",
-        routePath: "/job-single-v5/5",
       },
     ],
   },
@@ -169,18 +37,6 @@ module.exports = [
         name: "Employers List V1",
         routePath: "/employers-list-v1",
       },
-      {
-        name: "Employers List V2",
-        routePath: "/employers-list-v2",
-      },
-      {
-        name: "Employers List V3",
-        routePath: "/employers-list-v3",
-      },
-      {
-        name: "Employers List V4",
-        routePath: "/employers-list-v4",
-      },
     ],
   },
   {
@@ -190,14 +46,6 @@ module.exports = [
       {
         name: "Employers Single V1",
         routePath: "/employers-single-v1/1",
-      },
-      {
-        name: "Employers Single V2",
-        routePath: "/employers-single-v2/2",
-      },
-      {
-        name: "Employers Single V3",
-        routePath: "/employers-single-v3/3",
       },
     ],
   },
@@ -209,22 +57,6 @@ module.exports = [
         name: "Candidates List V1",
         routePath: "/candidates-list-v1",
       },
-      {
-        name: "Candidates List V2",
-        routePath: "/candidates-list-v2",
-      },
-      {
-        name: "Candidates List V3",
-        routePath: "/candidates-list-v3",
-      },
-      {
-        name: "Candidates List V4",
-        routePath: "/candidates-list-v4",
-      },
-      {
-        name: "Candidates List V5",
-        routePath: "/candidates-list-v5",
-      },
     ],
   },
   {
@@ -234,14 +66,6 @@ module.exports = [
       {
         name: "Candidates Single V1",
         routePath: "/candidates-single-v1/1",
-      },
-      {
-        name: "Candidates Single V2",
-        routePath: "/candidates-single-v2/2",
-      },
-      {
-        name: "Candidates Single V3",
-        routePath: "/candidates-single-v3/3",
       },
     ],
   },

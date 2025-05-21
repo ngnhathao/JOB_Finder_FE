@@ -62,9 +62,15 @@ export const authService = {
   },
 
   logout() {
-    Cookies.remove('token');
-    Cookies.remove('role');
-    Cookies.remove('name'); // Xóa tên khỏi cookie khi logout
+    Cookies.remove('token', { path: '/' });
+    Cookies.remove('role', { path: '/' });
+    Cookies.remove('name', { path: '/' });
+    Cookies.remove('token', { path: '/', domain: 'localhost' });
+    Cookies.remove('role', { path: '/', domain: 'localhost' });
+    Cookies.remove('name', { path: '/', domain: 'localhost' });
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    localStorage.removeItem('name');
   },
 
   getToken() {

@@ -58,7 +58,21 @@ const DefaulHeader2 = () => {
   }, [isLoggedIn, role, user, dispatch]);
 
   const handleLogout = () => {
-    authService.logout();
+    // Xóa cookie với cả path '/' và domain 'localhost'
+    if (typeof window !== "undefined") {
+      const Cookies = require('js-cookie');
+      Cookies.remove('token', { path: '/' });
+      Cookies.remove('role', { path: '/' });
+      Cookies.remove('name', { path: '/' });
+      Cookies.remove('token', { path: '/', domain: 'localhost' });
+      Cookies.remove('role', { path: '/', domain: 'localhost' });
+      Cookies.remove('name', { path: '/', domain: 'localhost' });
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      localStorage.removeItem('name');
+      console.log('LOGOUT CALLED: cookies and localStorage removed');
+    }
+    authService.logout(); // vẫn gọi để đồng bộ logic
     dispatch(clearLoginState());
     router.push('/');
   };
@@ -141,19 +155,14 @@ const DefaulHeader2 = () => {
                   </ul>
                 </div>
               )}
-              {/* {role === 'User' && (
-                <Link href="/candidates-dashboard/dashboard" className="theme-btn btn-style-three ml-2">
-                  Dashboard Candidate
-                </Link>
-              )} */}
-              {role === 'User' && (
+              {role === 'Candidate' && (
                 <div className="dropdown dashboard-option">
                   <a className="dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <Image
                       alt="avatar"
                       width={50}
                       height={50}
-                      src="/images/resource/company-6.png"
+                      src="/images/resource/candidate-1.png"
                       className="thumb"
                     />
                     <span className="name">{user || 'My Account'}</span>

@@ -6,8 +6,8 @@ import {
   findJobItems,
   employerItems,
   candidateItems,
-  blogItems,
-  pageItems,
+  // blogItems,
+  // pageItems,
 } from "../../data/mainMenuData";
 import { usePathname } from "next/navigation";
 import { isActiveLink } from "../../utils/linkActiveChecker";

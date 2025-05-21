@@ -28,7 +28,7 @@ export const findJobItems = [
     items: [
       {
         name: "Job Single",
-        routePath: "/job-single-v3/3",
+        routePath: "/job-single-v1/3",
       },
     ],
   },

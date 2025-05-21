@@ -46,7 +46,7 @@ const FormContent = ({ isPopup = false }) => {
       const userRole = authService.getRole();
       switch (userRole) {
         case 'Admin':
-          router.push('/admin-dashboard'); // Vẫn chuyển Admin đến dashboard riêng (nếu có)
+          router.push('/admin-dashboard/dashboard'); // Sửa đường dẫn chuyển hướng
           break;
         case 'Employer':
         case 'User': // Hoặc 'Candidate'

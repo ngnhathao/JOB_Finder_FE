@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 const Header = () => {
   const [navbar, setNavbar] = useState(false);
@@ -34,18 +35,20 @@ const Header = () => {
                   <Image
                     width={154}
                     height={50}
-                    src="/images/logo-2.svg"
-                    alt="logo"
-                    title="brand"
+                    src={require("@/public/images/jobfinder-logo.png").default || "/images/jobfinder-logo.png"}
+                    alt="JobFinder logo"
+                    title="JobFinder"
+                    onError={(e) => { e.target.onerror = null; e.target.src = "/images/logo.svg"; }}
                   />
                 </Link>
                 <Link href="/" className="isSticky">
                   <Image
                     width={154}
                     height={50}
-                    src="/images/logo.svg"
-                    alt="logo"
-                    title="brand"
+                    src={require("@/public/images/jobfinder-logo.png").default || "/images/jobfinder-logo.png"}
+                    alt="JobFinder logo"
+                    title="JobFinder"
+                    onError={(e) => { e.target.onerror = null; e.target.src = "/images/logo.svg"; }}
                   />
                 </Link>
               </div>

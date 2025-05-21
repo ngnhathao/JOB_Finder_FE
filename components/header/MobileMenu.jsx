@@ -16,8 +16,9 @@ const MobileMenu = () => {
                   <Image
                     width={154}
                     height={50}
-                    src="/images/logo.svg"
-                    alt="brand"
+                    src="/images/jobfinder-logo.png"
+                    alt="JobFinder logo"
+                    title="JobFinder"
                   />
                 </Link>
               </div>

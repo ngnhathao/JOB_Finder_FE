@@ -76,8 +76,10 @@ const DefaulHeader2 = () => {
                 <Image
                   width={154}
                   height={50}
-                  src="/images/logo.svg"
-                  alt="brand"
+                  src={require("@/public/images/jobfinder-logo.png").default || "/images/jobfinder-logo.png"}
+                  alt="JobFinder logo"
+                  title="JobFinder"
+                  onError={(e) => { e.target.onerror = null; e.target.src = "/images/logo.svg"; }}
                 />
               </Link>
             </div>

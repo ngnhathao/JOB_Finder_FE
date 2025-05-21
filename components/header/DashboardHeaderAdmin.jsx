@@ -5,13 +5,18 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import employerMenuData from "../../data/adminMenuData";
 import { isActiveLink } from "../../utils/linkActiveChecker";
-import { usePathname } from "next/navigation";
-
+import { usePathname, useRouter } from "next/navigation";
+import { useDispatch } from 'react-redux';
+import { clearLoginState } from '@/features/auth/authSlice';
+import { authService } from "../../services/authService";
+import Cookies from 'js-cookie';
 
 const DashboardHeader = () => {
     const [navbar, setNavbar] = useState(false);
     const [fullName, setFullName] = useState("Admin");
     const [avatar, setAvatar] = useState("/images/resource/company-6.png");
+    const router = useRouter();
+    const dispatch = useDispatch();
 
     const changeBackground = () => {
         if (window.scrollY >= 0) {
@@ -30,6 +35,33 @@ const DashboardHeader = () => {
             if (user.avatar) setAvatar(user.avatar);
         }
     }, []);
+
+    const handleLogout = () => {
+        // Xóa cookie với cả path '/' và domain 'localhost'
+        if (typeof window !== "undefined") {
+          Cookies.remove('token', { path: '/' });
+          Cookies.remove('role', { path: '/' });
+          Cookies.remove('name', { path: '/' });
+          Cookies.remove('token', { path: '/', domain: 'localhost' });
+          Cookies.remove('role', { path: '/', domain: 'localhost' });
+          Cookies.remove('name', { path: '/', domain: 'localhost' });
+          localStorage.removeItem('token');
+          localStorage.removeItem('role');
+          localStorage.removeItem('name');
+          console.log('LOGOUT CALLED from Admin Dashboard Header: cookies and localStorage removed');
+        }
+        authService.logout(); // vẫn gọi để đồng bộ logic
+        dispatch(clearLoginState());
+        router.push('/'); // Redirect to home or login page
+      };
+    
+      const handleMenuClick = (item) => {
+        if (item.isLogout) {
+          handleLogout();
+        } else {
+            router.push(item.routePath);
+        }
+      };
 
     return (
         // <!-- Main Header-->
@@ -92,12 +124,19 @@ const DashboardHeader = () => {
                                         } mb-1`}
                                         key={item.id}
                                     >
-                                        <Link href={item.routePath}>
-                                            <i
-                                                className={`la ${item.icon}`}
-                                            ></i>{" "}
-                                            {item.name}
-                                        </Link>
+                                        {item.isLogout ? (
+                                            <a href="#" onClick={(e) => { e.preventDefault(); handleMenuClick(item); }}>
+                                                <i className={`la ${item.icon}`}></i>{" "}
+                                                {item.name}
+                                            </a>
+                                        ) : (
+                                            <Link href={item.routePath}>
+                                                <i
+                                                    className={`la ${item.icon}`}
+                                                ></i>{" "}
+                                                {item.name}
+                                            </Link>
+                                        )}
                                     </li>
                                 ))}
                             </ul>

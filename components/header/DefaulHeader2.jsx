@@ -11,6 +11,8 @@ import Image from "next/image";
 import employerMenuData from "../../data/employerMenuData";
 import { isActiveLink } from "../../utils/linkActiveChecker";
 import candidatesMenuData from "../../data/candidatesMenuData";
+import adminMenuData from "../../data/adminMenuData";
+
 
 
 const DefaulHeader2 = () => {
@@ -196,9 +198,42 @@ const DefaulHeader2 = () => {
                 </div>
               )}
               {role === 'Admin' && (
-                <Link href="/admin-dashboard" className="theme-btn btn-style-three ml-2">
-                  Dashboard Admin
-                </Link>
+                <div className="dropdown dashboard-option">
+                  <a className="dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <Image
+                      alt="avatar"
+                      width={50}
+                      height={50}
+                      src="/images/resource/candidate-1.png"
+                      className="thumb"
+                    />
+                    <span className="name">{user || 'Admin Account'}</span>
+                  </a>
+                  <ul className="dropdown-menu">
+                    {adminMenuData.map((item) => (
+                      <li
+                        className={`${
+                          isActiveLink(item.routePath, pathname)
+                            ? "active"
+                            : ""
+                        } mb-1`}
+                        key={item.id}
+                      >
+                        {item.isLogout ? (
+                          <a href="#" onClick={(e) => { e.preventDefault(); handleMenuClick(item); }}>
+                            <i className={`la ${item.icon}`}></i>{" "}
+                            {item.name}
+                          </a>
+                        ) : (
+                          <Link href={item.routePath}>
+                            <i className={`la ${item.icon}`}></i>{" "}
+                            {item.name}
+                          </Link>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           ) : (

@@ -47,14 +47,16 @@ const FormContent = ({ isPopup = false }) => {
       const userRole = authService.getRole();
       switch (userRole) {
         case 'Admin':
-          router.push('/admin-dashboard/dashboard'); // Sửa đường dẫn chuyển hướng
+          router.push('/admin-dashboard/dashboard');
           break;
-        case 'Employer':
-        case 'User': // Hoặc 'Candidate'
+        case 'Company':
+          router.push('/');
+          break;
+        case 'Candidate':
+          router.push('/'); // Candidates also go to home now
+          break;
         default:
-          // Sau khi login thành công, refresh trang hiện tại để cập nhật UI
           router.refresh();
-          // Không cần push '/' nữa nếu modal đã đóng và refresh trang hiện tại
           break;
       }
 

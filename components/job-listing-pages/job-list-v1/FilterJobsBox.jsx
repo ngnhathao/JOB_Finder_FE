@@ -1,4 +1,6 @@
+
 'use client'
+
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -24,12 +26,14 @@ import {
 import Image from "next/image";
 import { jobService } from "../../../services/jobService";
 
+
 const FilterJobsBox = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [totalJobs, setTotalJobs] = useState(0);
   const [displayCount, setDisplayCount] = useState(10);
+
 
   const { jobList, jobSort } = useSelector((state) => state.filter);
   const {
@@ -44,8 +48,10 @@ const FilterJobsBox = () => {
     tag,
   } = jobList || {};
 
+
   const { sort, perPage } = jobSort;
   const dispatch = useDispatch();
+
 
   // Fetch jobs khi filters thay đổi
   useEffect(() => {
@@ -67,6 +73,7 @@ const FilterJobsBox = () => {
           limit: perPage.end || 10
         };
 
+
         console.log('Fetching jobs with filters:', filters);
         const response = await jobService.getJobs(filters);
         console.log('Jobs response:', response);
@@ -81,55 +88,68 @@ const FilterJobsBox = () => {
       }
     };
 
+
     fetchJobs();
   }, [keyword, location, destination, category, jobType, datePosted, experience, salary, tag, sort, perPage]);
+
 
   // keyword filter on title
   const keywordFilter = (item) =>
     keyword ? item.title.toLowerCase().includes(keyword.toLowerCase()) : true;
 
+
   // location filter
   const locationFilter = (item) =>
     location ? item?.industryId?.toLowerCase().includes(location.toLowerCase()) : true;
+
 
   // destination filter
   const destinationFilter = (item) =>
     destination?.min === 0 && destination?.max === 100 ? true :
     item?.destination?.min >= destination?.min && item?.destination?.max <= destination?.max;
 
+
   // category filter
   const categoryFilter = (item) =>
     category ? item?.industryId?.toLowerCase() === category.toLowerCase() : true;
+
 
   // job-type filter
   const jobTypeFilter = (item) =>
     jobType?.length ? jobType.includes(item.jobTypeId) : true;
 
+
   // date-posted filter
   const datePostedFilter = (item) =>
-    datePosted && datePosted !== "all" ? 
+    datePosted && datePosted !== "all" ?
     item?.createdAt?.toLowerCase().split(" ").join("-").includes(datePosted) : true;
+
 
   // experience level filter
   const experienceFilter = (item) =>
     experience?.length ? experience.includes(item.experienceId) : true;
+
 
   // salary filter
   const salaryFilter = (item) =>
     salary?.min === 0 && salary?.max === 20000 ? true :
     item.salary >= salary?.min && item.salary <= salary?.max;
 
+
   // tag filter
   const tagFilter = (item) => tag ? item?.industryId === tag : true;
+
 
   // sort filter
   const sortFilter = (a, b) =>
     sort === "des" ? b.jobId - a.jobId : a.jobId - b.jobId;
 
+
   // Thêm handler cho nút Show More
   const handleShowMore = () => {
     setDisplayCount(prev => prev + 10);
   };
+
 
   let content = jobs
     ?.filter(keywordFilter)
@@ -148,17 +168,18 @@ const FilterJobsBox = () => {
         <div className="inner-box">
           <div className="content">
             <span className="company-logo">
-              <Image 
-                width={50} 
-                height={49} 
-                src={item.imageJob || '/images/default-job.png'} 
+              <Image
+                width={50}
+                height={49}
+                src={item.imageJob || '/images/default-job.png'}
                 alt={`${item.title} image`}
                 className="job-image"
               />
             </span>
             <h4>
-              <Link href={`/job-single-v1/${item.jobId}`}>{item.title}</Link>
+              <Link href={`/job-single-v3/${item.jobId}`}>{item.title}</Link>
             </h4>
+
 
             <ul className="job-info">
               <li>
@@ -179,6 +200,7 @@ const FilterJobsBox = () => {
               </li>
             </ul>
 
+
             <ul className="job-other-info">
               <li className="job-type">{item.jobTypeId}</li>
               <li className="level">{item.levelId}</li>
@@ -186,9 +208,11 @@ const FilterJobsBox = () => {
               <li className="expiry">Deadline: {new Date(item.expiryDate).toLocaleDateString()}</li>
             </ul>
 
+
             <div className="post-date">
               Postting DateDate: {new Date(item.createdAt).toLocaleDateString()}
             </div>
+
 
             <button className="bookmark-btn">
               <span className="flaticon-bookmark"></span>
@@ -198,16 +222,19 @@ const FilterJobsBox = () => {
       </div>
     ));
 
+
   // sort handler
   const sortHandler = (e) => {
     dispatch(addSort(e.target.value));
   };
+
 
   // per page handler
   const perPageHandler = (e) => {
     const pageData = JSON.parse(e.target.value);
     dispatch(addPerPage(pageData));
   };
+
 
   // clear all filters
   const clearAll = () => {
@@ -227,13 +254,16 @@ const FilterJobsBox = () => {
     dispatch(addPerPage({ start: 0, end: 0 }));
   };
 
+
   if (loading) {
     return <div className="text-center py-5">Loading...</div>;
   }
 
+
   if (error) {
     return <div className="text-center py-5 text-danger">{error}</div>;
   }
+
 
   return (
     <>
@@ -251,11 +281,13 @@ const FilterJobsBox = () => {
           </div>
           {/* Collapsible sidebar button */}
 
+
           <div className="text">
             Show <strong>{jobs?.length}</strong> of <strong>{totalJobs}</strong> jobs
           </div>
         </div>
         {/* End show-result */}
+
 
         <div className="sort-by">
           {keyword !== "" ||
@@ -281,6 +313,7 @@ const FilterJobsBox = () => {
             </button>
           ) : undefined}
 
+
           <select
             value={sort}
             className="chosen-single form-select"
@@ -291,6 +324,7 @@ const FilterJobsBox = () => {
             <option value="des">Oldest</option>
           </select>
           {/* End select */}
+
 
           <select
             onChange={perPageHandler}
@@ -312,13 +346,13 @@ const FilterJobsBox = () => {
         <div className="ls-show-more">
           <p>Show {displayCount} of {totalJobs} Jobs</p>
           <div className="bar">
-            <span 
-              className="bar-inner" 
+            <span
+              className="bar-inner"
               style={{ width: `${(displayCount / totalJobs) * 100}%` }}
             ></span>
           </div>
           {displayCount < totalJobs && (
-            <button 
+            <button
               className="show-more"
               onClick={handleShowMore}
             >
@@ -330,5 +364,6 @@ const FilterJobsBox = () => {
     </>
   );
 };
+
 
 export default FilterJobsBox;

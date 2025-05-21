@@ -53,27 +53,29 @@ const FilterJobsBox = () => {
       try {
         setLoading(true);
         const filters = {
-          keyword,
-          location,
-          destination,
-          category,
-          jobType,
-          datePosted,
-          experience,
-          salary,
-          tag,
-          sort,
-          page: Math.floor(perPage.start / perPage.end) + 1,
+          keyword: keyword || '',
+          location: location || '',
+          destination: destination || { min: 0, max: 100 },
+          category: category || '',
+          jobType: jobType || [],
+          datePosted: datePosted || '',
+          experience: experience || [],
+          salary: salary || { min: 0, max: 20000 },
+          tag: tag || '',
+          sort: sort || '',
+          page: perPage.end ? Math.floor(perPage.start / perPage.end) + 1 : 1,
           limit: perPage.end || 10
         };
 
+        console.log('Fetching jobs with filters:', filters);
         const response = await jobService.getJobs(filters);
+        console.log('Jobs response:', response);
         setJobs(response.data);
         setTotalJobs(response.total);
         setError(null);
       } catch (err) {
+        console.error('Error in fetchJobs:', err);
         setError('Failed to fetch jobs');
-        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -84,66 +86,45 @@ const FilterJobsBox = () => {
 
   // keyword filter on title
   const keywordFilter = (item) =>
-    keyword !== ""
-      ? item.jobTitle.toLocaleLowerCase().includes(keyword.toLocaleLowerCase())
-      : item;
+    keyword ? item.title.toLowerCase().includes(keyword.toLowerCase()) : true;
 
   // location filter
   const locationFilter = (item) =>
-    location !== ""
-      ? item?.location
-          ?.toLocaleLowerCase()
-          .includes(location?.toLocaleLowerCase())
-      : item;
+    location ? item?.industryId?.toLowerCase().includes(location.toLowerCase()) : true;
 
-  // location filter
+  // destination filter
   const destinationFilter = (item) =>
-    item?.destination?.min >= destination?.min &&
-    item?.destination?.max <= destination?.max;
+    destination?.min === 0 && destination?.max === 100 ? true :
+    item?.destination?.min >= destination?.min && item?.destination?.max <= destination?.max;
 
   // category filter
   const categoryFilter = (item) =>
-    category !== ""
-      ? item?.category?.toLocaleLowerCase() === category?.toLocaleLowerCase()
-      : item;
+    category ? item?.industryId?.toLowerCase() === category.toLowerCase() : true;
 
   // job-type filter
   const jobTypeFilter = (item) =>
-    jobType?.length !== 0 && item?.jobType !== undefined
-      ? jobType?.includes(
-          item?.jobType[0]?.type.toLocaleLowerCase().split(" ").join("-")
-        )
-      : item;
+    jobType?.length ? jobType.includes(item.jobTypeId) : true;
 
   // date-posted filter
   const datePostedFilter = (item) =>
-    datePosted !== "all" && datePosted !== ""
-      ? item?.created_at
-          ?.toLocaleLowerCase()
-          .split(" ")
-          .join("-")
-          .includes(datePosted)
-      : item;
+    datePosted && datePosted !== "all" ? 
+    item?.createdAt?.toLowerCase().split(" ").join("-").includes(datePosted) : true;
 
   // experience level filter
   const experienceFilter = (item) =>
-    experience?.length !== 0
-      ? experience?.includes(
-          item?.experience?.split(" ").join("-").toLocaleLowerCase()
-        )
-      : item;
+    experience?.length ? experience.includes(item.experienceId) : true;
 
   // salary filter
   const salaryFilter = (item) =>
-    item?.totalSalary?.min >= salary?.min &&
-    item?.totalSalary?.max <= salary?.max;
+    salary?.min === 0 && salary?.max === 20000 ? true :
+    item.salary >= salary?.min && item.salary <= salary?.max;
 
   // tag filter
-  const tagFilter = (item) => (tag !== "" ? item?.tag === tag : item);
+  const tagFilter = (item) => tag ? item?.industryId === tag : true;
 
   // sort filter
   const sortFilter = (a, b) =>
-    sort === "des" ? a.id > b.id && -1 : a.id < b.id && -1;
+    sort === "des" ? b.jobId - a.jobId : a.jobId - b.jobId;
 
   // Thêm handler cho nút Show More
   const handleShowMore = () => {
@@ -163,46 +144,51 @@ const FilterJobsBox = () => {
     ?.sort(sortFilter)
     .slice(0, displayCount)
     ?.map((item) => (
-      <div className="job-block" key={item.id}>
+      <div className="job-block" key={item.jobId}>
         <div className="inner-box">
           <div className="content">
             <span className="company-logo">
-              <Image width={50} height={49} src={item.logo} alt="item brand" />
+              <Image 
+                width={50} 
+                height={49} 
+                src={item.imageJob || '/images/default-job.png'} 
+                alt={`${item.title} image`}
+                className="job-image"
+              />
             </span>
             <h4>
-              <Link href={`/job-single-v1/${item.id}`}>{item.jobTitle}</Link>
+              <Link href={`/job-single-v1/${item.jobId}`}>{item.title}</Link>
             </h4>
 
             <ul className="job-info">
               <li>
                 <span className="icon flaticon-briefcase"></span>
-                {item.company}
+                {item.companyId}
               </li>
-              {/* compnay info */}
               <li>
                 <span className="icon flaticon-map-locator"></span>
-                {item.location}
+                {item.industryId}
               </li>
-              {/* location info */}
               <li>
-                <span className="icon flaticon-clock-3"></span> {item.time}
+                <span className="icon flaticon-clock-3"></span>
+                {new Date(item.timeStart).toLocaleDateString()} - {new Date(item.timeEnd).toLocaleDateString()}
               </li>
-              {/* time info */}
               <li>
-                <span className="icon flaticon-money"></span> {item.salary}
+                <span className="icon flaticon-money"></span>
+                {item.salary.toLocaleString('vi-VN')} USD
               </li>
-              {/* salary info */}
             </ul>
-            {/* End .job-info */}
 
             <ul className="job-other-info">
-              {item?.jobType?.map((val, i) => (
-                <li key={i} className={`${val.styleClass}`}>
-                  {val.type}
-                </li>
-              ))}
+              <li className="job-type">{item.jobTypeId}</li>
+              <li className="level">{item.levelId}</li>
+              <li className="experience">{item.experienceId}</li>
+              <li className="expiry">Deadline: {new Date(item.expiryDate).toLocaleDateString()}</li>
             </ul>
-            {/* End .job-other-info */}
+
+            <div className="post-date">
+              Postting DateDate: {new Date(item.createdAt).toLocaleDateString()}
+            </div>
 
             <button className="bookmark-btn">
               <span className="flaticon-bookmark"></span>
@@ -210,7 +196,6 @@ const FilterJobsBox = () => {
           </div>
         </div>
       </div>
-      // End all jobs
     ));
 
   // sort handler

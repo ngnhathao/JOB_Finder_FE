@@ -48,11 +48,11 @@ const FormContent = ({ isPopup = false }) => {
         case 'Admin':
           router.push('/admin-dashboard');
           break;
-        case 'Employer':
+        case 'Company':
           // router.push('/employers-dashboard/dashboard');
           router.push('/');
           break;
-        case 'User': // Hoặc 'Candidate'
+        case 'Candidate': // Hoặc 'Candidate'
           router.push('/candidates-dashboard/dashboard');
           break;
         default:

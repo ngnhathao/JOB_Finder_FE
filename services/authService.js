@@ -43,7 +43,7 @@ export const authService = {
           email,
           phone,
           password,
-          role: '3' // Set default role as user
+          role: '1' // Set default role as user
         }),
       });
 

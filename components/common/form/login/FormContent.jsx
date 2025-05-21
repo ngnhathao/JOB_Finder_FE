@@ -46,14 +46,17 @@ const FormContent = ({ isPopup = false }) => {
       const userRole = authService.getRole();
       switch (userRole) {
         case 'Admin':
-          router.push('/admin-dashboard'); // Vẫn chuyển Admin đến dashboard riêng (nếu có)
+          router.push('/admin-dashboard');
           break;
         case 'Employer':
+          // router.push('/employers-dashboard/dashboard');
+          router.push('/');
+          break;
         case 'User': // Hoặc 'Candidate'
+          router.push('/candidates-dashboard/dashboard');
+          break;
         default:
-          // Sau khi login thành công, refresh trang hiện tại để cập nhật UI
           router.refresh();
-          // Không cần push '/' nữa nếu modal đã đóng và refresh trang hiện tại
           break;
       }
 
@@ -127,6 +130,13 @@ const FormContent = ({ isPopup = false }) => {
 
         {/* Nút ẩn để đóng modal */}
         {isPopup && <button ref={closeBtnRef} data-bs-dismiss="modal" style={{ display: 'none' }}></button>}
+
+{/* Simple Loading Overlay */}
+{loading && (
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255, 255, 255, 0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+            <p>Loading...</p>
+          </div>
+        )}
 
       </form>
       {/* End form */}

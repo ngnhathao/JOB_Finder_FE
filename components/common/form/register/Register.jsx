@@ -18,7 +18,7 @@ const Register = ({ isPopup = false, onRegistrationSuccess }) => {
       <h3>Create a Free Superio Account</h3>
 
       <Tabs onSelect={handleTabSelect}>
-        {/* <div className="form-group register-dual">
+        <div className="form-group register-dual">
           <TabList className="btn-box row">
             <Tab className="col-lg-6 col-md-12">
               <button className="theme-btn btn-style-four">
@@ -32,7 +32,7 @@ const Register = ({ isPopup = false, onRegistrationSuccess }) => {
               </button>
             </Tab>
           </TabList>
-        </div> */}
+        </div>
         {/* End .form-group */}
 
         <TabPanel>

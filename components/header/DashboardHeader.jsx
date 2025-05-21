@@ -42,11 +42,11 @@ const DashboardHeader = () => {
                             <div className="logo">
                                 <Link href="/">
                                     <Image
-                                        alt="brand"
-                                        src="/images/logo.svg"
+                                        alt="JobFinder logo"
+                                        src="/images/jobfinder-logo.png"
                                         width={154}
                                         height={50}
-                                        priority
+                                        title="JobFinder"
                                     />
                                 </Link>
                             </div>

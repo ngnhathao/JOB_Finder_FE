@@ -1,6 +1,11 @@
+import dynamic from "next/dynamic";
+
 import FormContent from "../../common/form/login/FormContent";
-import MobileMenu from "../../header/MobileMenu";
-import Header from "./Header";
+// import MobileMenu from "../../header/MobileMenu"; // Remove direct import
+// import Header from "./Header"; // Remove direct import
+
+const Header = dynamic(() => import("./Header"), { ssr: false }); // Dynamically import Header
+const MobileMenu = dynamic(() => import("../../header/MobileMenu"), { ssr: false }); // Dynamically import MobileMenu
 
 const index = () => {
   return (

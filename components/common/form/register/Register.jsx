@@ -6,7 +6,7 @@ import Form from "./FormContent";
 import Link from "next/link";
 import { useState } from "react";
 
-const Register = ({ isPopup = false }) => {
+const Register = ({ isPopup = false, onRegistrationSuccess }) => {
   const [selectedRole, setSelectedRole] = useState('Candidate');
 
   const handleTabSelect = (index) => {
@@ -36,12 +36,12 @@ const Register = ({ isPopup = false }) => {
         {/* End .form-group */}
 
         <TabPanel>
-          <Form role={selectedRole} />
+          <Form onRegistrationSuccess={onRegistrationSuccess} />
         </TabPanel>
         {/* End cadidates Form */}
 
         <TabPanel>
-          <Form role={selectedRole} />
+          <Form onRegistrationSuccess={onRegistrationSuccess} />
         </TabPanel>
         {/* End Employer Form */}
       </Tabs>

@@ -10,6 +10,7 @@ export function middleware(request) {
     { path: '/employers-dashboard', requiredRole: 'Company' },
     { path: '/candidates-dashboard', requiredRole: 'Candidate' },
     { path: '/admin-dashboard', requiredRole: 'Admin' },
+
   ];
 
   // Kiểm tra các route cần bảo vệ

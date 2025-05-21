@@ -3,15 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import candidatesMenuData from "../../data/candidatesMenuData";
-import HeaderNavContent from "./HeaderNavContent";
+import employerMenuData from "../../data/adminMenuData";
 import { isActiveLink } from "../../utils/linkActiveChecker";
-
 import { usePathname } from "next/navigation";
-const DashboardCandidatesHeader = () => {
+
+
+const DashboardHeader = () => {
     const [navbar, setNavbar] = useState(false);
-
-
+    const [fullName, setFullName] = useState("Admin");
+    const [avatar, setAvatar] = useState("/images/resource/company-6.png");
 
     const changeBackground = () => {
         if (window.scrollY >= 0) {
@@ -23,6 +23,12 @@ const DashboardCandidatesHeader = () => {
 
     useEffect(() => {
         window.addEventListener("scroll", changeBackground);
+        // Lấy thông tin user từ localStorage (nếu có)
+        if (typeof window !== 'undefined') {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            if (user.fullName) setFullName(user.fullName);
+            if (user.avatar) setAvatar(user.avatar);
+        }
     }, []);
 
     return (
@@ -51,24 +57,10 @@ const DashboardCandidatesHeader = () => {
                             </div>
                         </div>
                         {/* End .logo-box */}
-
-                        <HeaderNavContent />
-                        {/* <!-- Main Menu End--> */}
                     </div>
                     {/* End .nav-outer */}
 
                     <div className="outer-box">
-                        <button className="menu-btn">
-                            <span className="count">1</span>
-                            <span className="icon la la-heart-o"></span>
-                        </button>
-                        {/* wishlisted menu */}
-
-                        <button className="menu-btn">
-                            <span className="icon la la-bell"></span>
-                        </button>
-                        {/* End notification-icon */}
-
                         {/* <!-- Dashboard Option --> */}
                         <div className="dropdown dashboard-option">
                             <a
@@ -80,15 +72,15 @@ const DashboardCandidatesHeader = () => {
                                 <Image
                                     alt="avatar"
                                     className="thumb"
-                                    src="/images/resource/candidate-1.png"
+                                    src={avatar}
                                     width={50}
                                     height={50}
                                 />
-                                <span className="name">My Account</span>
+                                <span className="name">{fullName}</span>
                             </a>
 
                             <ul className="dropdown-menu">
-                                {candidatesMenuData.map((item) => (
+                                {employerMenuData.map((item) => (
                                     <li
                                         className={`${
                                             isActiveLink(
@@ -119,4 +111,4 @@ const DashboardCandidatesHeader = () => {
     );
 };
 
-export default DashboardCandidatesHeader;
+export default DashboardHeader;

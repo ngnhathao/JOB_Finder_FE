@@ -42,8 +42,20 @@ const FormContent = ({ isPopup = false }) => {
           closeBtnRef.current.click();
       }
 
-      // Chuyển hướng về trang Home sau khi đăng nhập thành công
-      router.push('/');
+      // Chuyển hướng dựa trên role sau khi đăng nhập thành công
+      const userRole = authService.getRole();
+      switch (userRole) {
+        case 'Admin':
+          router.push('/admin-dashboard/dashboard'); // Sửa đường dẫn chuyển hướng
+          break;
+        case 'Employer':
+        case 'User': // Hoặc 'Candidate'
+        default:
+          // Sau khi login thành công, refresh trang hiện tại để cập nhật UI
+          router.refresh();
+          // Không cần push '/' nữa nếu modal đã đóng và refresh trang hiện tại
+          break;
+      }
 
     } catch (error) {
       setError(error.message || 'Invalid email or password');

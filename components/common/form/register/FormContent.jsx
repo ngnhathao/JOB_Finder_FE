@@ -44,7 +44,7 @@ const FormContent = ({ onRegistrationSuccess }) => {
         onRegistrationSuccess();
       } else {
         // Redirect to login page after successful registration (default behavior)
-        router.push('/LoginPopup');
+        router.push('/login');
       }
     } catch (error) {
       setError(error.message || 'Registration failed. Please try again.');

@@ -42,6 +42,7 @@ const FormContent = ({ isPopup = false }) => {
           closeBtnRef.current.click();
       }
 
+
       // Chuyển hướng dựa trên role sau khi đăng nhập thành công
       const userRole = authService.getRole();
       switch (userRole) {
@@ -56,6 +57,7 @@ const FormContent = ({ isPopup = false }) => {
           // Không cần push '/' nữa nếu modal đã đóng và refresh trang hiện tại
           break;
       }
+
 
     } catch (error) {
       setError(error.message || 'Invalid email or password');
@@ -127,6 +129,13 @@ const FormContent = ({ isPopup = false }) => {
 
         {/* Nút ẩn để đóng modal */}
         {isPopup && <button ref={closeBtnRef} data-bs-dismiss="modal" style={{ display: 'none' }}></button>}
+
+{/* Simple Loading Overlay */}
+{loading && (
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255, 255, 255, 0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+            <p>Loading...</p>
+          </div>
+        )}
 
       </form>
       {/* End form */}

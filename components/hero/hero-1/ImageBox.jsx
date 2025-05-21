@@ -7,9 +7,9 @@ const ImageBox = () => {
         <Image
           width={486}
           height={589}
-          layout="responsive"
           src="/images/resource/banner-img-1.png"
           alt="hero image"
+          className="w-full h-auto"
         />
       </figure>
       {/* hero image */}

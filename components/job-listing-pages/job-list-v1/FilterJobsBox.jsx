@@ -1,9 +1,7 @@
-
-
 'use client'
 
 import Link from "next/link";
-import jobs from "../../../data/job-featured";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addCategory,
@@ -24,8 +22,15 @@ import {
   clearJobTypeToggle,
 } from "../../../features/job/jobSlice";
 import Image from "next/image";
+import { jobService } from "../../../services/jobService";
 
 const FilterJobsBox = () => {
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [totalJobs, setTotalJobs] = useState(0);
+  const [displayCount, setDisplayCount] = useState(10);
+
   const { jobList, jobSort } = useSelector((state) => state.filter);
   const {
     keyword,
@@ -40,8 +45,42 @@ const FilterJobsBox = () => {
   } = jobList || {};
 
   const { sort, perPage } = jobSort;
-
   const dispatch = useDispatch();
+
+  // Fetch jobs khi filters thay đổi
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        setLoading(true);
+        const filters = {
+          keyword,
+          location,
+          destination,
+          category,
+          jobType,
+          datePosted,
+          experience,
+          salary,
+          tag,
+          sort,
+          page: Math.floor(perPage.start / perPage.end) + 1,
+          limit: perPage.end || 10
+        };
+
+        const response = await jobService.getJobs(filters);
+        setJobs(response.data);
+        setTotalJobs(response.total);
+        setError(null);
+      } catch (err) {
+        setError('Failed to fetch jobs');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchJobs();
+  }, [keyword, location, destination, category, jobType, datePosted, experience, salary, tag, sort, perPage]);
 
   // keyword filter on title
   const keywordFilter = (item) =>
@@ -106,6 +145,11 @@ const FilterJobsBox = () => {
   const sortFilter = (a, b) =>
     sort === "des" ? a.id > b.id && -1 : a.id < b.id && -1;
 
+  // Thêm handler cho nút Show More
+  const handleShowMore = () => {
+    setDisplayCount(prev => prev + 10);
+  };
+
   let content = jobs
     ?.filter(keywordFilter)
     ?.filter(locationFilter)
@@ -117,7 +161,7 @@ const FilterJobsBox = () => {
     ?.filter(salaryFilter)
     ?.filter(tagFilter)
     ?.sort(sortFilter)
-    .slice(perPage.start, perPage.end !== 0 ? perPage.end : 10)
+    .slice(0, displayCount)
     ?.map((item) => (
       <div className="job-block" key={item.id}>
         <div className="inner-box">
@@ -198,6 +242,14 @@ const FilterJobsBox = () => {
     dispatch(addPerPage({ start: 0, end: 0 }));
   };
 
+  if (loading) {
+    return <div className="text-center py-5">Loading...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center py-5 text-danger">{error}</div>;
+  }
+
   return (
     <>
       <div className="ls-switcher">
@@ -205,7 +257,7 @@ const FilterJobsBox = () => {
           <div className="show-1023">
             <button
               type="button"
-              className="theme-btn toggle-filters "
+              className="theme-btn toggle-filters"
               data-bs-toggle="offcanvas"
               data-bs-target="#filter-sidebar"
             >
@@ -215,7 +267,7 @@ const FilterJobsBox = () => {
           {/* Collapsible sidebar button */}
 
           <div className="text">
-            Show <strong>{content?.length}</strong> jobs
+            Show <strong>{jobs?.length}</strong> of <strong>{totalJobs}</strong> jobs
           </div>
         </div>
         {/* End show-result */}
@@ -257,41 +309,13 @@ const FilterJobsBox = () => {
 
           <select
             onChange={perPageHandler}
-            className="chosen-single form-select ms-3 "
+            className="chosen-single form-select ms-3"
             value={JSON.stringify(perPage)}
           >
-            <option
-              value={JSON.stringify({
-                start: 0,
-                end: 0,
-              })}
-            >
-              All
-            </option>
-            <option
-              value={JSON.stringify({
-                start: 0,
-                end: 10,
-              })}
-            >
-              10 per page
-            </option>
-            <option
-              value={JSON.stringify({
-                start: 0,
-                end: 20,
-              })}
-            >
-              20 per page
-            </option>
-            <option
-              value={JSON.stringify({
-                start: 0,
-                end: 30,
-              })}
-            >
-              30 per page
-            </option>
+            <option value={JSON.stringify({ start: 0, end: 0 })}>All</option>
+            <option value={JSON.stringify({ start: 0, end: 10 })}>10 per page</option>
+            <option value={JSON.stringify({ start: 0, end: 20 })}>20 per page</option>
+            <option value={JSON.stringify({ start: 0, end: 30 })}>30 per page</option>
           </select>
           {/* End select */}
         </div>
@@ -299,13 +323,25 @@ const FilterJobsBox = () => {
       {/* End top filter bar box */}
       {content}
       {/* <!-- List Show More --> */}
-      <div className="ls-show-more">
-        <p>Show 36 of 497 Jobs</p>
-        <div className="bar">
-          <span className="bar-inner" style={{ width: "40%" }}></span>
+      {jobs.length > 0 && (
+        <div className="ls-show-more">
+          <p>Show {displayCount} of {totalJobs} Jobs</p>
+          <div className="bar">
+            <span 
+              className="bar-inner" 
+              style={{ width: `${(displayCount / totalJobs) * 100}%` }}
+            ></span>
+          </div>
+          {displayCount < totalJobs && (
+            <button 
+              className="show-more"
+              onClick={handleShowMore}
+            >
+              Show More
+            </button>
+          )}
         </div>
-        <button className="show-more">Show More</button>
-      </div>
+      )}
     </>
   );
 };

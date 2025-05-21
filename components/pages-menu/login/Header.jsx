@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 const Header = () => {
   const [navbar, setNavbar] = useState(false);

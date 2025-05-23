@@ -1,27 +1,43 @@
 'use client'
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 // import Map from "../../../Map";
 import Select from "react-select";
 import { useRouter } from 'next/navigation';
 
 const PostBoxForm = () => {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
+    jobId: 0,
     title: '',
     description: '',
-    companyId: '', // This will be set from the logged-in company
-    salary: '',
-    industryId: '',
+    companyId: 0,
+    salary: 0,
+    industryId: 0,
     expiryDate: '',
-    levelId: '',
-    jobTypeId: '',
-    experienceId: '',
+    levelId: 0,
+    jobTypeId: 0,
+    experienceLevelId: 0,
     timeStart: '',
     timeEnd: '',
-    status: 'active', // Default status
-    imageJob: null
+    status: 0,
+    provinceName: '',
+    addressDetail: '',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   });
+
+  useEffect(() => {
+    // Lấy userId từ localStorage và gán vào companyId
+    const userId = localStorage.getItem('userId');
+    if (userId) {
+      setFormData(prev => ({
+        ...prev,
+        companyId: parseInt(userId)
+      }));
+    }
+  }, []);
 
   const [errors, setErrors] = useState({});
 
@@ -46,8 +62,8 @@ const PostBoxForm = () => {
     if (!formData.jobTypeId) {
       newErrors.jobTypeId = 'Job type is required';
     }
-    if (!formData.experienceId) {
-      newErrors.experienceId = 'Experience is required';
+    if (!formData.experienceLevelId) {
+      newErrors.experienceLevelId = 'Experience level is required';
     }
     if (!formData.expiryDate) {
       newErrors.expiryDate = 'Application deadline is required';
@@ -58,8 +74,11 @@ const PostBoxForm = () => {
     if (!formData.timeEnd) {
       newErrors.timeEnd = 'End date is required';
     }
-    if (!formData.imageJob) {
-      newErrors.imageJob = 'Job image is required';
+    if (!formData.provinceName) {
+      newErrors.provinceName = 'Province is required';
+    }
+    if (!formData.addressDetail) {
+      newErrors.addressDetail = 'Address detail is required';
     }
 
     // Validate dates
@@ -101,33 +120,74 @@ const PostBoxForm = () => {
     }
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    setFormData(prev => ({
-      ...prev,
-      imageJob: file
-    }));
-    // Clear error when user selects an image
-    if (errors.imageJob) {
-      setErrors(prev => ({
-        ...prev,
-        imageJob: ''
-      }));
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) {
       return;
     }
-    
-    // Store form data in localStorage before navigating to payment
-    localStorage.setItem('pendingJobData', JSON.stringify(formData));
-    
-    // Navigate to payment page
-    router.push('/employers-dashboard/packages');
+
+    if (!formData.companyId) {
+      alert('Company information is not available. Please try again later.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Prepare the data in the format API expects
+      const jobData = {
+        ...formData,
+        jobId: 0,
+        companyId: parseInt(formData.companyId),
+        salary: parseInt(formData.salary),
+        industryId: parseInt(formData.industryId),
+        levelId: parseInt(formData.levelId),
+        jobTypeId: parseInt(formData.jobTypeId),
+        experienceLevelId: parseInt(formData.experienceLevelId),
+        status: 0,
+        expiryDate: new Date(formData.expiryDate).toISOString(),
+        timeStart: new Date(formData.timeStart).toISOString(),
+        timeEnd: new Date(formData.timeEnd).toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      console.log('Sending data:', jobData);
+
+      const response = await fetch('https://localhost:7266/api/Job/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(jobData),
+        credentials: 'include',
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        console.error('Server response:', responseData);
+        if (responseData.errors) {
+          const serverErrors = Object.entries(responseData.errors)
+            .map(([key, value]) => `${key}: ${value.join(', ')}`)
+            .join('\n');
+          throw new Error(`Validation errors:\n${serverErrors}`);
+        }
+        throw new Error(responseData.title || `Failed to create job: ${response.status} ${response.statusText}`);
+      }
+
+      console.log('Success response:', responseData);
+      alert('Job created successfully!');
+      router.push('/employers-dashboard/jobs');
+      
+    } catch (error) {
+      console.error('Error creating job:', error);
+      alert(error.message || 'Failed to create job. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -143,6 +203,7 @@ const PostBoxForm = () => {
             onChange={handleInputChange}
             placeholder="Enter job title" 
             className={errors.title ? 'error' : ''}
+            disabled={isLoading}
           />
           {errors.title && <span className="error-message">{errors.title}</span>}
         </div>
@@ -156,6 +217,7 @@ const PostBoxForm = () => {
             onChange={handleInputChange}
             placeholder="Enter job description"
             className={errors.description ? 'error' : ''}
+            disabled={isLoading}
           ></textarea>
           {errors.description && <span className="error-message">{errors.description}</span>}
         </div>
@@ -170,6 +232,7 @@ const PostBoxForm = () => {
             onChange={handleInputChange}
             placeholder="Enter salary amount"
             className={errors.salary ? 'error' : ''}
+            disabled={isLoading}
           />
           {errors.salary && <span className="error-message">{errors.salary}</span>}
         </div>
@@ -182,6 +245,7 @@ const PostBoxForm = () => {
             value={formData.industryId}
             onChange={handleInputChange}
             className={`chosen-single form-select ${errors.industryId ? 'error' : ''}`}
+            disabled={isLoading}
           >
             <option value="">Select Industry</option>
             <option value="1">Technology</option>
@@ -201,6 +265,7 @@ const PostBoxForm = () => {
             value={formData.levelId}
             onChange={handleInputChange}
             className={`chosen-single form-select ${errors.levelId ? 'error' : ''}`}
+            disabled={isLoading}
           >
             <option value="">Select Level</option>
             <option value="1">Entry Level</option>
@@ -219,6 +284,7 @@ const PostBoxForm = () => {
             value={formData.jobTypeId}
             onChange={handleInputChange}
             className={`chosen-single form-select ${errors.jobTypeId ? 'error' : ''}`}
+            disabled={isLoading}
           >
             <option value="">Select Job Type</option>
             <option value="1">Full-time</option>
@@ -230,23 +296,24 @@ const PostBoxForm = () => {
           {errors.jobTypeId && <span className="error-message">{errors.jobTypeId}</span>}
         </div>
 
-        {/* Experience */}
+        {/* Experience Level */}
         <div className="form-group col-lg-6 col-md-12">
-          <label>Experience</label>
+          <label>Experience Level</label>
           <select 
-            name="experienceId" 
-            value={formData.experienceId}
+            name="experienceLevelId" 
+            value={formData.experienceLevelId}
             onChange={handleInputChange}
-            className={`chosen-single form-select ${errors.experienceId ? 'error' : ''}`}
+            className={`chosen-single form-select ${errors.experienceLevelId ? 'error' : ''}`}
+            disabled={isLoading}
           >
-            <option value="">Select Experience</option>
+            <option value="">Select Experience Level</option>
             <option value="1">0-1 years</option>
             <option value="2">1-3 years</option>
             <option value="3">3-5 years</option>
             <option value="4">5-10 years</option>
             <option value="5">10+ years</option>
           </select>
-          {errors.experienceId && <span className="error-message">{errors.experienceId}</span>}
+          {errors.experienceLevelId && <span className="error-message">{errors.experienceLevelId}</span>}
         </div>
 
         {/* Expiry Date */}
@@ -258,6 +325,7 @@ const PostBoxForm = () => {
             value={formData.expiryDate}
             onChange={handleInputChange}
             className={`form-control ${errors.expiryDate ? 'error' : ''}`}
+            disabled={isLoading}
           />
           {errors.expiryDate && <span className="error-message">{errors.expiryDate}</span>}
         </div>
@@ -271,6 +339,7 @@ const PostBoxForm = () => {
             value={formData.timeStart}
             onChange={handleInputChange}
             className={`form-control ${errors.timeStart ? 'error' : ''}`}
+            disabled={isLoading}
           />
           {errors.timeStart && <span className="error-message">{errors.timeStart}</span>}
         </div>
@@ -284,45 +353,50 @@ const PostBoxForm = () => {
             value={formData.timeEnd}
             onChange={handleInputChange}
             className={`form-control ${errors.timeEnd ? 'error' : ''}`}
+            disabled={isLoading}
           />
           {errors.timeEnd && <span className="error-message">{errors.timeEnd}</span>}
         </div>
 
-        {/* Job Image */}
-        <div className="form-group col-lg-12 col-md-12">
-          <label>Job Image</label>
-          <div className="file-upload-wrapper">
-            <div className="file-upload-input-wrapper">
-              <input 
-                type="file" 
-                name="imageJob" 
-                onChange={handleImageChange}
-                accept="image/*"
-                id="job-image-upload"
-                className={`file-upload-input ${errors.imageJob ? 'error' : ''}`}
-              />
-              <label htmlFor="job-image-upload" className={`file-upload-label ${errors.imageJob ? 'error' : ''}`}>
-                <i className="fas fa-cloud-upload-alt"></i>
-                <span>Choose a file or drag it here</span>
-              </label>
-            </div>
-            {formData.imageJob && (
-              <div className="file-preview">
-                <img 
-                  src={URL.createObjectURL(formData.imageJob)} 
-                  alt="Preview" 
-                  className="preview-image"
-                />
-                <span className="file-name">{formData.imageJob.name}</span>
-              </div>
-            )}
-            {errors.imageJob && <span className="error-message">{errors.imageJob}</span>}
-          </div>
+        {/* Province Name */}
+        <div className="form-group col-lg-6 col-md-12">
+          <label>Province</label>
+          <input 
+            type="text" 
+            name="provinceName" 
+            value={formData.provinceName}
+            onChange={handleInputChange}
+            placeholder="Enter province name"
+            className={errors.provinceName ? 'error' : ''}
+            disabled={isLoading}
+          />
+          {errors.provinceName && <span className="error-message">{errors.provinceName}</span>}
+        </div>
+
+        {/* Address Detail */}
+        <div className="form-group col-lg-6 col-md-12">
+          <label>Address Detail</label>
+          <input 
+            type="text" 
+            name="addressDetail" 
+            value={formData.addressDetail}
+            onChange={handleInputChange}
+            placeholder="Enter address detail"
+            className={errors.addressDetail ? 'error' : ''}
+            disabled={isLoading}
+          />
+          {errors.addressDetail && <span className="error-message">{errors.addressDetail}</span>}
         </div>
 
         {/* Submit Button */}
         <div className="form-group col-lg-12 col-md-12 text-right">
-          <button type="submit" className="theme-btn btn-style-one">Post Job</button>
+          <button 
+            type="submit" 
+            className="theme-btn btn-style-one"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Posting...' : 'Post Job'}
+          </button>
         </div>
       </div>
 
@@ -363,82 +437,17 @@ const PostBoxForm = () => {
           padding: 5px;
         }
 
-        .file-upload-wrapper {
-          width: 100%;
-          margin-top: 10px;
+        button:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
         }
 
-        .file-upload-input-wrapper {
+        .theme-btn {
           position: relative;
-          width: 100%;
         }
 
-        .file-upload-input {
-          position: absolute;
-          left: 0;
-          top: 0;
-          width: 100%;
-          height: 100%;
-          opacity: 0;
-          cursor: pointer;
-          z-index: 2;
-        }
-
-        .file-upload-label {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
-          width: 100%;
-          padding: 20px;
-          background-color: #f8f9fa;
-          border: 2px dashed #ddd;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-
-        .file-upload-label.error {
-          border-color: #dc3545;
-        }
-
-        .file-upload-label:hover {
-          border-color: #4a90e2;
-          background-color: #f0f7ff;
-        }
-
-        .file-upload-label i {
-          font-size: 24px;
-          color: #4a90e2;
-        }
-
-        .file-upload-label span {
-          color: #666;
-          font-size: 14px;
-        }
-
-        .file-preview {
-          margin-top: 15px;
-          display: flex;
-          align-items: center;
-          gap: 15px;
-          padding: 10px;
-          background-color: #fff;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-        }
-
-        .preview-image {
-          width: 60px;
-          height: 60px;
-          object-fit: cover;
-          border-radius: 4px;
-        }
-
-        .file-name {
-          color: #333;
-          font-size: 14px;
-          word-break: break-all;
+        .theme-btn:disabled {
+          background-color: #ccc;
         }
       `}</style>
     </form>

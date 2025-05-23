@@ -7,9 +7,11 @@ export function middleware(request) {
 
   // Định nghĩa các path cần bảo vệ và role yêu cầu
   const protectedRoutes = [
+
     { path: '/employers-dashboard', requiredRole: 'Company' },
     { path: '/candidates-dashboard', requiredRole: 'Candidate' },
     { path: '/admin-dashboard', requiredRole: 'Admin' },
+
 
   ];
 

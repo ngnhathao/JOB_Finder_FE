@@ -42,6 +42,7 @@ const FormContent = ({ isPopup = false }) => {
           closeBtnRef.current.click();
       }
 
+
       // Chuyển hướng dựa trên role sau khi đăng nhập thành công
       const userRole = authService.getRole();
       switch (userRole) {
@@ -58,6 +59,7 @@ const FormContent = ({ isPopup = false }) => {
           router.refresh();
           break;
       }
+
 
     } catch (error) {
       setError(error.message || 'Invalid email or password');

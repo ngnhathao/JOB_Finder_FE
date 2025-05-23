@@ -10,7 +10,13 @@ import "./user-manager-animations.css";
 
 const API_URL = "https://localhost:7266/api/User";
 
-const defaultUser = { fullName: "", email: "", phone: "", role: "User", password: "", status: "Active", skills: [], cvUrl: "" };
+const roleOptions = [
+  { id: 1, name: "Candidate" },
+  { id: 2, name: "Company" },
+  { id: 3, name: "Admin" }
+];
+
+const defaultUser = { fullName: "", email: "", phone: "", roleId: 1, password: "", status: "Active", skills: [], cvUrl: "", image: "" };
 
 const UserManager = () => {
   const [users, setUsers] = useState([]);
@@ -26,6 +32,9 @@ const UserManager = () => {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 10;
+  const [filterRole, setFilterRole] = useState('all');
+  const [filterLock, setFilterLock] = useState('all');
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
 
   // Tự động ẩn alert sau 2.5s
   useEffect(() => {
@@ -41,7 +50,14 @@ const UserManager = () => {
     fetch(API_URL)
       .then((res) => res.json())
       .then((data) => {
-        setUsers(data);
+        console.log('User list:', data); // Log dữ liệu trả về từ API
+        // Map thêm roleId dựa vào role (chuỗi)
+        const mapped = data.map(user => ({
+          ...user,
+          roleId: roleOptions.find(r => r.name === user.role)?.id || 1,
+          image: user.image || '' // Ensure image field exists and is a string
+        }));
+        setUsers(mapped);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -50,12 +66,16 @@ const UserManager = () => {
     fetchUsers();
   }, []);
 
-  // Lọc user theo search
-  const filteredUsers = users.filter(user =>
-    user.fullName?.toLowerCase().includes(search.toLowerCase()) ||
-    user.email?.toLowerCase().includes(search.toLowerCase()) ||
-    user.phone?.toLowerCase().includes(search.toLowerCase())
-  );
+  // Lọc user theo search và filter
+  const filteredUsers = users.filter(user => {
+    const matchSearch =
+      user.fullName?.toLowerCase().includes(search.toLowerCase()) ||
+      user.email?.toLowerCase().includes(search.toLowerCase()) ||
+      user.phone?.toLowerCase().includes(search.toLowerCase());
+    const matchRole = filterRole === 'all' || user.roleId === Number(filterRole);
+    const matchLock = filterLock === 'all' || (filterLock === 'locked' ? user.isActive === false : user.isActive !== false);
+    return matchSearch && matchRole && matchLock;
+  });
 
   // Phân trang
   const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
@@ -75,22 +95,29 @@ const UserManager = () => {
     setShowDetailModal(true);
   };
   const handleShowEdit = (user) => {
-    setFormUser({ ...user, password: "" });
+    setFormUser({
+      ...user,
+      roleId: roleOptions.find(r => r.name === user.role)?.id || 1,
+      password: "",
+      image: user.image || '' // Use correct field name
+    });
     setSelectedUser(user);
     setShowEditModal(true);
     setFormError("");
+    setSelectedImageFile(null);
   };
   const handleShowAdd = () => {
     setFormUser(defaultUser);
     setShowAddModal(true);
     setFormError("");
+    setSelectedImageFile(null);
   };
   const handleShowDelete = (user) => {
     setSelectedUser(user);
     setShowDeleteModal(true);
   };
   const handleDelete = () => {
-    fetch(`${API_URL}/${selectedUser.userId}`, { method: "DELETE" })
+    fetch(`${API_URL}/${selectedUser.id}`, { method: "DELETE" })
       .then((res) => {
         if (res.ok) {
           setAlertMsg("User deleted successfully!");
@@ -103,22 +130,35 @@ const UserManager = () => {
       .catch(() => setAlertMsg("Failed to delete user."));
   };
   const handleToggleLock = (user) => {
-    // Giả sử API PATCH trạng thái hoạt động
-    fetch(`${API_URL}/${user.userId}/toggle-lock`, { method: "PATCH" })
+    const isLocked = user.isActive === false;
+    const action = isLocked ? 'unlock' : 'lock';
+    fetch(`${API_URL}/${user.id}/${action}`, { method: "PUT" })
       .then((res) => {
         if (res.ok) {
-          setAlertMsg("User status updated!");
-          fetchUsers();
+          setAlertMsg(`User ${isLocked ? 'unlocked' : 'locked'} successfully!`);
+          setTimeout(fetchUsers, 300);
         } else {
-          setAlertMsg("Failed to update status.");
+          setAlertMsg(`Failed to ${action} user.`);
         }
       })
-      .catch(() => setAlertMsg("Failed to update status."));
+      .catch(() => setAlertMsg(`Failed to ${action} user.`));
   };
 
   // Form handlers
   const handleFormChange = (e) => {
-    setFormUser({ ...formUser, [e.target.name]: e.target.value });
+    const { name, value, files } = e.target;
+    if (name === "image" && files && files[0]) {
+      setSelectedImageFile(files[0]);
+      setFormUser({
+        ...formUser,
+        image: URL.createObjectURL(files[0])
+      });
+    } else {
+      setFormUser({
+        ...formUser,
+        [name]: name === "roleId" ? Number(value) : value
+      });
+    }
   };
   const validateForm = () => {
     if (!formUser.fullName || !formUser.email) {
@@ -136,10 +176,26 @@ const UserManager = () => {
     if (!validateForm()) return;
     // Add or Edit
     if (showAddModal) {
+      const formData = new FormData();
+      formData.append('fullName', formUser.fullName);
+      formData.append('email', formUser.email);
+      formData.append('phone', formUser.phone);
+      formData.append('roleId', formUser.roleId);
+      formData.append('password', formUser.password);
+
+      if (selectedImageFile) {
+        formData.append('imageFile', selectedImageFile);
+      } else if (formUser.image && showEditModal) {
+        formData.append('image', formUser.image);
+      }
+
       fetch(API_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formUser),
+        body: formData,
+        // Remove Content-Type header to let the browser set it automatically with the boundary
+        headers: {
+          'Accept': 'application/json',
+        },
       })
         .then((res) => {
           if (res.ok) {
@@ -152,17 +208,25 @@ const UserManager = () => {
         })
         .catch(() => setFormError("Failed to add user."));
     } else if (showEditModal) {
-      // Chỉ gửi đúng các trường API yêu cầu
-      const userToUpdate = {
-        fullName: formUser.fullName,
-        email: formUser.email,
-        phone: formUser.phone,
-        role: formUser.role,
-      };
-      fetch(`${API_URL}/${formUser.userId}`, {
+      const formData = new FormData();
+      formData.append('fullName', formUser.fullName);
+      formData.append('email', formUser.email);
+      formData.append('phone', formUser.phone);
+      formData.append('roleId', formUser.roleId);
+      if (selectedImageFile) {
+        formData.append('imageFile', selectedImageFile);
+      } else if (formUser.image) {
+        formData.append('image', formUser.image);
+      }
+
+      console.log('PUT user:', formData, 'userId:', formUser.id);
+      fetch(`${API_URL}/${formUser.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userToUpdate),
+        body: formData,
+        // Remove Content-Type header to let the browser set it automatically with the boundary
+        headers: {
+          'Accept': 'application/json',
+        },
       })
         .then((res) => {
           if (res.ok) {
@@ -201,10 +265,21 @@ const UserManager = () => {
                       type="text"
                       className="form-control form-control-sm me-2"
                       style={{width:220}}
-                      placeholder="Search user..."
+                      placeholder="Search by name, email, phone..."
                       value={search}
                       onChange={handleSearch}
                     />
+                    <select className="form-select form-select-sm me-2" style={{width:120}} value={filterRole} onChange={e=>setFilterRole(e.target.value)}>
+                      <option value="all">All Roles</option>
+                      {roleOptions.map(role => (
+                        <option key={role.id} value={role.id}>{role.name}</option>
+                      ))}
+                    </select>
+                    <select className="form-select form-select-sm me-2" style={{width:120}} value={filterLock} onChange={e=>setFilterLock(e.target.value)}>
+                      <option value="all">All Status</option>
+                      <option value="locked">Locked</option>
+                      <option value="unlocked">Unlocked</option>
+                    </select>
                     <button className="btn btn-primary" onClick={handleShowAdd}>
                       Add User
                     </button>
@@ -219,6 +294,7 @@ const UserManager = () => {
                       <thead>
                         <tr>
                           <th>ID</th>
+                          <th>Image</th>
                           <th>Full Name</th>
                           <th>Email</th>
                           <th>Phone</th>
@@ -228,26 +304,39 @@ const UserManager = () => {
                       </thead>
                       <tbody>
                         {paginatedUsers.length === 0 ? (
-                          <tr><td colSpan={6}>No users found</td></tr>
+                          <tr><td colSpan={7}>No users found</td></tr>
                         ) : (
-                          paginatedUsers.map((user) => (
-                            <tr key={user.userId}>
-                              <td>{user.userId}</td>
-                              <td>{user.fullName}</td>
-                              <td>{user.email}</td>
-                              <td>{user.phone}</td>
-                              <td>{user.role}</td>
-                              <td>
-                                <button className="btn btn-sm me-1" onClick={() => handleShowDetail(user)} style={{display:'none'}}>View</button>
-                                <Link href={`/admin-dashboard/user-manager/${user.userId}`} className="btn btn-sm me-1">View</Link>
-                                <button className="btn btn-sm me-1" onClick={() => handleShowEdit(user)}>Edit</button>
-                                <button className="btn btn-sm me-1" onClick={() => handleShowDelete(user)}>Delete</button>
-                                <button className="btn btn-sm" onClick={() => handleToggleLock(user)}>
-                                  Lock/Unlock
-                                </button>
-                              </td>
-                            </tr>
-                          ))
+                          paginatedUsers.map((user) => {
+                            const isLocked = user.isActive === false;
+                            return (
+                              <tr key={user.id}>
+                                <td>{user.id}</td>
+                                <td>
+                                  <img 
+                                    src={user.image || '/images/default-avatar.png'} 
+                                    alt={user.fullName}
+                                    style={{width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover'}}
+                                  />
+                                </td>
+                                <td>{user.fullName}</td>
+                                <td>{user.email}</td>
+                                <td>{user.phone}</td>
+                                <td>{user.role}</td>
+                                <td>
+                                  <button className="btn btn-sm me-1" onClick={() => handleShowDetail(user)} style={{display:'none'}}>View</button>
+                                  <Link href={`/admin-dashboard/user-manager/${user.id}`} className="btn btn-sm me-1">View</Link>
+                                  <button className="btn btn-sm me-1" onClick={() => handleShowEdit(user)}>Edit</button>
+                                  <button className="btn btn-sm me-1" onClick={() => handleShowDelete(user)}>Delete</button>
+                                  <button
+                                    className={`btn btn-sm me-1 ${isLocked ? 'btn-outline-danger' : 'btn-outline-secondary'}`}
+                                    onClick={() => handleToggleLock(user)}
+                                  >
+                                    {isLocked ? 'Unlock' : 'Lock'}
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })
                         )}
                       </tbody>
                     </table>
@@ -290,6 +379,23 @@ const UserManager = () => {
                 <div className="modal-body">
                   {formError && <div className="alert alert-danger">{formError}</div>}
                   <div className="mb-2">
+                    <label>Profile Image</label>
+                    <input 
+                      className="form-control" 
+                      type="file"
+                      name="image"
+                      onChange={handleFormChange}
+                      accept="image/*"
+                    />
+                    {(selectedImageFile || formUser.image) && (
+                      <img 
+                        src={selectedImageFile ? URL.createObjectURL(selectedImageFile) : formUser.image} 
+                        alt="Preview" 
+                        style={{width: '100px', height: '100px', objectFit: 'cover', marginTop: '10px', borderRadius: '50%'}}
+                      />
+                    )}
+                  </div>
+                  <div className="mb-2">
                     <label>Full Name</label>
                     <input className="form-control" name="fullName" value={formUser.fullName} onChange={handleFormChange} required />
                   </div>
@@ -303,15 +409,11 @@ const UserManager = () => {
                   </div>
                   <div className="mb-2">
                     <label>Role</label>
-                    <select className="form-control" name="role" value={formUser.role} onChange={handleFormChange}>
-                      <option value="Candidate">Candidate</option>
-                      <option value="Company">Company</option>
-                      <option value="Admin">Admin</option>
+                    <select className="form-control" name="roleId" value={formUser.roleId} onChange={handleFormChange}>
+                      {roleOptions.map(role => (
+                        <option key={role.id} value={role.id}>{role.name}</option>
+                      ))}
                     </select>
-                  </div>
-                  <div className="mb-2">
-                    <label>Password (leave blank to keep current)</label>
-                    <input className="form-control" name="password" type="password" value={formUser.password} onChange={handleFormChange} autoComplete="new-password" />
                   </div>
                 </div>
                 <div className="modal-footer">
@@ -336,6 +438,23 @@ const UserManager = () => {
                 <div className="modal-body">
                   {formError && <div className="alert alert-danger">{formError}</div>}
                   <div className="mb-2">
+                    <label>Profile Image</label>
+                    <input 
+                      className="form-control" 
+                      type="file"
+                      name="image"
+                      onChange={handleFormChange}
+                      accept="image/*"
+                    />
+                    {selectedImageFile && (
+                      <img 
+                        src={URL.createObjectURL(selectedImageFile)} 
+                        alt="Preview" 
+                        style={{width: '100px', height: '100px', objectFit: 'cover', marginTop: '10px', borderRadius: '50%'}}
+                      />
+                    )}
+                  </div>
+                  <div className="mb-2">
                     <label>Full Name</label>
                     <input className="form-control" name="fullName" value={formUser.fullName} onChange={handleFormChange} required />
                   </div>
@@ -349,10 +468,10 @@ const UserManager = () => {
                   </div>
                   <div className="mb-2">
                     <label>Role</label>
-                    <select className="form-control" name="role" value={formUser.role} onChange={handleFormChange}>
-                      <option value="Candidate">Candidate</option>
-                      <option value="Company">Company</option>
-                      <option value="Admin">Admin</option>
+                    <select className="form-control" name="roleId" value={formUser.roleId} onChange={handleFormChange}>
+                      {roleOptions.map(role => (
+                        <option key={role.id} value={role.id}>{role.name}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="mb-2">

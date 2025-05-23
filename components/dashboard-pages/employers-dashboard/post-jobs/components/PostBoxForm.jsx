@@ -13,7 +13,7 @@ const PostBoxForm = () => {
     title: '',
     description: '',
     companyId: 0,
-    salary: 0,
+    salary: "",
     industryId: 0,
     expiryDate: '',
     levelId: 0,
@@ -28,6 +28,13 @@ const PostBoxForm = () => {
     updatedAt: new Date().toISOString()
   });
 
+  const [levels, setLevels] = useState([]);
+  const [industries, setIndustries] = useState([]);
+  const [jobTypes, setJobTypes] = useState([]);
+  const [experienceLevels, setExperienceLevels] = useState([]);
+
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
   useEffect(() => {
     // Lấy userId từ localStorage và gán vào companyId
     const userId = localStorage.getItem('userId');
@@ -37,6 +44,30 @@ const PostBoxForm = () => {
         companyId: parseInt(userId)
       }));
     }
+
+    // Fetch levels from API
+    fetch('https://localhost:7266/api/Level')
+      .then(res => res.json())
+      .then(data => setLevels(data))
+      .catch(() => setLevels([]));
+
+    // Fetch industries from API
+    fetch('https://localhost:7266/api/Industry')
+      .then(res => res.json())
+      .then(data => setIndustries(data))
+      .catch(() => setIndustries([]));
+
+    // Fetch job types from API
+    fetch('https://localhost:7266/api/JobType')
+      .then(res => res.json())
+      .then(data => setJobTypes(data))
+      .catch(() => setJobTypes([]));
+
+    // Fetch experience levels from API
+    fetch('https://localhost:7266/api/ExperienceLevels')
+      .then(res => res.json())
+      .then(data => setExperienceLevels(data))
+      .catch(() => setExperienceLevels([]));
   }, []);
 
   const [errors, setErrors] = useState({});
@@ -82,20 +113,25 @@ const PostBoxForm = () => {
     }
 
     // Validate dates
+    if (formData.timeStart) {
+      const startDate = new Date(formData.timeStart);
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      if (startDate < today) {
+        newErrors.timeStart = 'Start date cannot be in the past';
+      }
+    }
     if (formData.timeStart && formData.timeEnd) {
       const startDate = new Date(formData.timeStart);
       const endDate = new Date(formData.timeEnd);
-      
       if (endDate <= startDate) {
         newErrors.timeEnd = 'End date must be after start date';
       }
     }
-
     if (formData.timeStart && formData.timeEnd && formData.expiryDate) {
       const startDate = new Date(formData.timeStart);
       const endDate = new Date(formData.timeEnd);
       const expiryDate = new Date(formData.expiryDate);
-      
       if (expiryDate < startDate || expiryDate > endDate) {
         newErrors.expiryDate = 'Application deadline must be between start date and end date';
       }
@@ -109,7 +145,14 @@ const PostBoxForm = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: [
+        "industryId",
+        "levelId",
+        "jobTypeId",
+        "experienceLevelId"
+      ].includes(name)
+        ? Number(value)
+        : value
     }));
     // Clear error when user starts typing
     if (errors[name]) {
@@ -165,7 +208,14 @@ const PostBoxForm = () => {
         credentials: 'include',
       });
 
-      const responseData = await response.json();
+      let responseData;
+      const text = await response.text();
+      try {
+        responseData = JSON.parse(text);
+      } catch (e) {
+        console.error('Raw response:', text);
+        throw new Error('Server returned non-JSON response');
+      }
 
       if (!response.ok) {
         console.error('Server response:', responseData);
@@ -178,9 +228,7 @@ const PostBoxForm = () => {
         throw new Error(responseData.title || `Failed to create job: ${response.status} ${response.statusText}`);
       }
 
-      console.log('Success response:', responseData);
-      alert('Job created successfully!');
-      router.push('/employers-dashboard/jobs');
+      setShowSuccessModal(true);
       
     } catch (error) {
       console.error('Error creating job:', error);
@@ -248,11 +296,9 @@ const PostBoxForm = () => {
             disabled={isLoading}
           >
             <option value="">Select Industry</option>
-            <option value="1">Technology</option>
-            <option value="2">Finance</option>
-            <option value="3">Healthcare</option>
-            <option value="4">Education</option>
-            <option value="5">Manufacturing</option>
+            {industries.map(ind => (
+              <option key={ind.industryId} value={ind.industryId}>{ind.industryName}</option>
+            ))}
           </select>
           {errors.industryId && <span className="error-message">{errors.industryId}</span>}
         </div>
@@ -268,10 +314,9 @@ const PostBoxForm = () => {
             disabled={isLoading}
           >
             <option value="">Select Level</option>
-            <option value="1">Entry Level</option>
-            <option value="2">Mid Level</option>
-            <option value="3">Senior Level</option>
-            <option value="4">Executive Level</option>
+            {levels.map((level, idx) => (
+              <option key={level.id || idx} value={level.id}>{level.levelName}</option>
+            ))}
           </select>
           {errors.levelId && <span className="error-message">{errors.levelId}</span>}
         </div>
@@ -287,11 +332,9 @@ const PostBoxForm = () => {
             disabled={isLoading}
           >
             <option value="">Select Job Type</option>
-            <option value="1">Full-time</option>
-            <option value="2">Part-time</option>
-            <option value="3">Contract</option>
-            <option value="4">Internship</option>
-            <option value="5">Remote</option>
+            {jobTypes.map(type => (
+              <option key={type.id} value={type.id}>{type.jobTypeName}</option>
+            ))}
           </select>
           {errors.jobTypeId && <span className="error-message">{errors.jobTypeId}</span>}
         </div>
@@ -307,11 +350,9 @@ const PostBoxForm = () => {
             disabled={isLoading}
           >
             <option value="">Select Experience Level</option>
-            <option value="1">0-1 years</option>
-            <option value="2">1-3 years</option>
-            <option value="3">3-5 years</option>
-            <option value="4">5-10 years</option>
-            <option value="5">10+ years</option>
+            {experienceLevels.map(level => (
+              <option key={level.id} value={level.id}>{level.name}</option>
+            ))}
           </select>
           {errors.experienceLevelId && <span className="error-message">{errors.experienceLevelId}</span>}
         </div>
@@ -400,6 +441,21 @@ const PostBoxForm = () => {
         </div>
       </div>
 
+      {showSuccessModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Success!</h3>
+            <p>Post job successfully!</p>
+            <button
+              className="theme-btn btn-style-one"
+              onClick={() => window.location.reload()}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       <style jsx>{`
         .form-control {
           width: 100%;
@@ -428,7 +484,6 @@ const PostBoxForm = () => {
         }
 
         input[type="date"] {
-          position: relative;
           cursor: pointer;
         }
 
@@ -448,6 +503,40 @@ const PostBoxForm = () => {
 
         .theme-btn:disabled {
           background-color: #ccc;
+        }
+
+        .modal-overlay {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(0,0,0,0.4);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+        }
+        .modal-content {
+          background: #fff;
+          border-radius: 8px;
+          padding: 24px 16px;
+          text-align: center;
+          width: 100%;
+          max-width: 350px;
+          min-width: 0;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+          box-sizing: border-box;
+        }
+        @media (max-width: 400px) {
+          .modal-content {
+            max-width: 95vw;
+            padding: 16px 4vw;
+          }
+        }
+        .modal-content h3 {
+          margin-bottom: 12px;
+          color: #28a745;
+        }
+        .modal-content button {
+          margin-top: 16px;
         }
       `}</style>
     </form>

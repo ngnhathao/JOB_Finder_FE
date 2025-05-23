@@ -34,17 +34,28 @@ const FormContent = ({ isPopup = false }) => {
 
     try {
       const responseData = await authService.login(formData.email, formData.password);
-      
-      dispatch(setLoginState({ isLoggedIn: true, user: responseData.name, role: responseData.role }));
+      console.log('Login response:', responseData);
+      const user = responseData.user || {};
+      dispatch(setLoginState({ isLoggedIn: true, user: user.fullName, role: responseData.role }));
+
+      // Lưu thông tin user vào localStorage để header lấy tên
+      localStorage.setItem('user', JSON.stringify({
+        fullName: user.fullName || '',
+        avatar: user.image || '/images/resource/company-6.png',
+        email: user.email || formData.email
+      }));
+
+      if (user.id) {
+        localStorage.setItem('userId', user.id);
+      }
 
       // Kích hoạt nút đóng modal nếu là popup
       if (isPopup && closeBtnRef.current) {
           closeBtnRef.current.click();
       }
 
-
       // Chuyển hướng dựa trên role sau khi đăng nhập thành công
-      const userRole = authService.getRole();
+      const userRole = responseData.role || user.role;
       switch (userRole) {
         case 'Admin':
           router.push('/admin-dashboard/dashboard');
@@ -53,16 +64,22 @@ const FormContent = ({ isPopup = false }) => {
           router.push('/');
           break;
         case 'Candidate':
-          router.push('/'); // Candidates also go to home now
+          router.push('/');
           break;
         default:
           router.refresh();
           break;
       }
 
-
     } catch (error) {
-      setError(error.message || 'Invalid email or password');
+      // Handle non-JSON or authentication errors
+      if (error.message && error.message.includes('Invalid credentials')) {
+        setError('Invalid email or password.');
+      } else if (error.message && error.message.includes('Unexpected token')) {
+        setError('Network or server error.');
+      } else {
+        setError(error.message || 'An error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

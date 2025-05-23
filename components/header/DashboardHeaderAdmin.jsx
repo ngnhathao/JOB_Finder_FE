@@ -30,9 +30,24 @@ const DashboardHeader = () => {
         window.addEventListener("scroll", changeBackground);
         // Lấy thông tin user từ localStorage (nếu có)
         if (typeof window !== 'undefined') {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            if (user.fullName) setFullName(user.fullName);
-            if (user.avatar) setAvatar(user.avatar);
+            const userString = localStorage.getItem('user');
+            console.log('User string from localStorage:', userString);
+            if (userString) {
+                const user = JSON.parse(userString);
+                console.log('Parsed user object:', user);
+                if (user.fullName) setFullName(user.fullName);
+                else if (user.name) setFullName(user.name);
+                if (user.avatar) {
+                    console.log('Found user avatar URL:', user.avatar);
+                    setAvatar(user.avatar);
+                } else {
+                    console.log('No user avatar URL found in user object.');
+                    setAvatar("/images/resource/company-6.png"); // Keep default if no avatar
+                }
+            } else {
+                console.log('No user data found in localStorage.');
+                setAvatar("/images/resource/company-6.png"); // Keep default if no user data
+            }
         }
     }, []);
 

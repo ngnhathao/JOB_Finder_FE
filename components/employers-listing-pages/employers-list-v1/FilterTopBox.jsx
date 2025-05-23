@@ -1,10 +1,7 @@
-
-
 'use client'
 
 import Link from "next/link";
 import ListingShowing from "../components/ListingShowing";
-import companyData from "../../../data/topCompany";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addCategory,
@@ -17,7 +14,7 @@ import {
 } from "../../../features/filter/employerFilterSlice";
 import Image from "next/image";
 
-const FilterTopBox = () => {
+const FilterTopBox = (props) => {
   const {
     keyword,
     location,
@@ -28,6 +25,8 @@ const FilterTopBox = () => {
     perPage,
   } = useSelector((state) => state.employerFilter) || {};
   const dispatch = useDispatch();
+
+  const { companies, loading, error } = props;
 
   // keyword filter
   const keywordFilter = (item) =>
@@ -61,7 +60,7 @@ const FilterTopBox = () => {
   const sortFilter = (a, b) =>
     sort === "des" ? a.id > b.id && -1 : a.id < b.id && -1;
 
-  let content = companyData
+  let content = companies
     ?.slice(perPage.start !== 0 && 12, perPage.end !== 0 ? perPage.end : 20)
     ?.filter(keywordFilter)
     ?.filter(locationFilter)
@@ -78,35 +77,33 @@ const FilterTopBox = () => {
                 <Image
                   width={50}
                   height={50}
-                  src={company.img}
+                  src={company.UrlCompanyLogo || company.ImageLogoLgr || '/images/resource/company-6.png'}
                   alt="company brand"
                 />
               </span>
               <h4>
                 <Link href={`/employers-single-v1/${company.id}`}>
-                  {company.name}
+                  {company.CompanyName}
                 </Link>
               </h4>
               <ul className="job-info">
                 <li>
                   <span className="icon flaticon-map-locator"></span>{" "}
-                  {company.location}
+                  {company.Location}
                 </li>
                 <li>
                   <span className="icon flaticon-briefcase"></span>{" "}
-                  {company.jobType}
+                  {company.Industry}
                 </li>
               </ul>
             </div>
 
             <ul className="job-other-info">
               {company.isFeatured ? <li className="privacy">Featured</li> : ""}
-
-              <li className="time">Open Jobs – {company.jobNumber}</li>
             </ul>
           </div>
 
-          <div className="text">{company.jobDetails}</div>
+          <div className="text">{company.companyProfileDescription}</div>
 
           <button className="bookmark-btn">
             <span className="flaticon-bookmark"></span>
@@ -142,7 +139,7 @@ const FilterTopBox = () => {
       <div className="ls-switcher">
         <div className="showing-result">
           <div className="text">
-            <strong>{content?.length}</strong> jobs
+            {loading ? 'Loading...' : error ? 'Error loading companies' : <><strong>{companies.length}</strong> companies found</>}
           </div>
         </div>
         {/* End showing-result */}

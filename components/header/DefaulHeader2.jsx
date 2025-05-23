@@ -46,7 +46,12 @@ const DefaulHeader2 = () => {
   useEffect(() => {
     const token = authService.getToken();
     const userRole = authService.getRole();
-    const userName = authService.getName();
+    let userName = authService.getName(); // Thử lấy từ cookie trước
+    if (typeof window !== 'undefined') {
+        const userStorage = JSON.parse(localStorage.getItem('user') || '{}');
+        if (userStorage.fullName) userName = userStorage.fullName; // Ưu tiên fullName từ localStorage
+        else if (userStorage.name) userName = userStorage.name; // Nếu không có fullName, lấy name từ localStorage
+    }
 
     if (token && userRole) {
         if (!isLoggedIn || role !== userRole || user !== userName) {

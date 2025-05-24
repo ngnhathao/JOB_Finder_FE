@@ -4,31 +4,20 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
-const FilterTopBox = () => {
-  const [companies, setCompanies] = useState([]);
+const FilterTopBox = (props) => {
+  const { companies, loading, error } = props;
   const [industries, setIndustries] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/CompanyProfile").then(res => {
-        if (!res.ok) throw new Error("Failed to fetch companies");
-        return res.json();
-      }),
-      fetch("/api/Industry").then(res => {
-        if (!res.ok) throw new Error("Failed to fetch industries");
-        return res.json();
-      })
-    ])
-      .then(([companiesData, industriesData]) => {
-        setCompanies(companiesData);
+    fetch("/api/Industry").then(res => {
+      if (!res.ok) throw new Error("Failed to fetch industries");
+      return res.json();
+    })
+      .then((industriesData) => {
         setIndustries(industriesData);
-        setLoading(false);
       })
       .catch((err) => {
-        setError(err.message);
-        setLoading(false);
+        // Có thể set error cho industry nếu muốn
       });
   }, []);
 
@@ -37,8 +26,12 @@ const FilterTopBox = () => {
     return acc;
   }, {});
 
-  if (loading) return <div className="loading-message">Đang tải dữ liệu...</div>;
+  // Lấy danh sách team size duy nhất
+  const teamSizes = Array.from(new Set(companies.map(c => c.teamSize).filter(Boolean)));
+
   if (error) return <div className="alert alert-danger">{error}</div>;
+  if (loading) return <div className="loading-message">Đang tải dữ liệu...</div>;
+  if (!companies || companies.length === 0) return <div>Không có công ty nào phù hợp</div>;
 
   return (
     <div className="companies-list">

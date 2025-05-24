@@ -5,8 +5,7 @@ import DashboardHeader from "@/components/header/DashboardHeader";
 import DashboardAdminSidebar from "@/components/header/DashboardAdminSidebar";
 import BreadCrumb from "@/components/dashboard-pages/BreadCrumb";
 import Image from "next/image";
-
-const API_URL = "https://localhost:7266/api/User";
+import ApiService from "@/services/api.service";
 
 const UserDetailPage = () => {
   const params = useParams();
@@ -15,12 +14,18 @@ const UserDetailPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_URL}/${userId}`)
-      .then((res) => res.json())
-      .then((data) => {
+    const fetchUser = async () => {
+      try {
+        const data = await ApiService.getUserById(userId);
         setUser(data);
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    fetchUser();
   }, [userId]);
 
   if (loading) return <div>Loading...</div>;

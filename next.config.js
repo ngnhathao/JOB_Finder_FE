@@ -1,21 +1,7 @@
 /** @type {import('next').NextConfig} */
-
 const nextConfig = {
   images: {
-    domains: [
-      'randomuser.me',
-      'jbagy.me',
-      'picsum.photos',
-      'example.com',
-      'cdn-icons-png.flaticon.com',
-      'localhost'
-    ],
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
-    ],
+    domains: ['randomuser.me', 'jbagy.me', 'res.cloudinary.com'],
   },
   async rewrites() {
     return [

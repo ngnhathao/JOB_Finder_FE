@@ -45,6 +45,10 @@ const FormContent = ({ isPopup = false }) => {
         email: user.email || formData.email
       }));
 
+      if (user.id) {
+        localStorage.setItem('userId', user.id);
+      }
+
       // Kích hoạt nút đóng modal nếu là popup
       if (isPopup && closeBtnRef.current) {
           closeBtnRef.current.click();

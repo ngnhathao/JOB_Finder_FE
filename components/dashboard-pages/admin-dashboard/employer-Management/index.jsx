@@ -5,8 +5,7 @@ import BreadCrumb from "../../BreadCrumb";
 import MenuToggler from "../../MenuToggler";
 import DashboardHeader from "../../../header/DashboardHeaderAdmin";
 import "../user-manager/user-manager-animations.css";
-
-const API_URL = "https://localhost:7266/api/CompanyProfile";
+import ApiService from "../../../../services/api.service";
 
 const EmployerManagement = () => {
   const [employers, setEmployers] = useState([]);
@@ -23,38 +22,48 @@ const EmployerManagement = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterTeamSize, setFilterTeamSize] = useState('all');
   const [filterIndustry, setFilterIndustry] = useState('all');
+  const [industries, setIndustries] = useState([]);
 
   useEffect(() => {
     fetchEmployers();
+    fetchIndustries();
   }, []);
 
-  const fetchEmployers = () => {
-    setLoading(true);
-    fetch(API_URL)
-      .then((res) => res.json())
-      .then((data) => {
-        // Map API fields to FE fields
-        const mapped = data.map((item) => ({
-          Id: item.userId,
-          CompanyName: item.companyName,
-          companyProfileDescription: item.companyProfileDescription,
-          Location: item.location,
-          UrlCompanyLogo: item.urlCompanyLogo,
-          ImageLogoLgr: item.imageLogoLgr,
-          TeamSize: item.teamSize,
-          IsVerified: item.isVerified,
-          Website: item.website,
-          Contact: item.contact,
-          Industry: item.industry || '',
-          IsLocked: !item.isActive
-        }));
-        setEmployers(mapped);
-        setLoading(false);
-      })
-      .catch(() => {
-        setEmployers([]);
-        setLoading(false);
-      });
+  const fetchIndustries = async () => {
+    try {
+      const data = await ApiService.getMasterData('INDUSTRIES');
+      setIndustries(data);
+    } catch (error) {
+      setIndustries([]);
+    }
+  };
+
+  const fetchEmployers = async () => {
+    try {
+      setLoading(true);
+      const data = await ApiService.getCompanies();
+      // Map API fields to FE fields
+      const mapped = data.map((item) => ({
+        Id: item.userId,
+        CompanyName: item.companyName,
+        companyProfileDescription: item.companyProfileDescription,
+        Location: item.location,
+        UrlCompanyLogo: item.urlCompanyLogo,
+        ImageLogoLgr: item.imageLogoLgr,
+        TeamSize: item.teamSize,
+        IsVerified: item.isVerified,
+        Website: item.website,
+        Contact: item.contact,
+        IndustryId: item.industryId || '',
+        IsLocked: !item.isActive
+      }));
+      setEmployers(mapped);
+    } catch (error) {
+      console.error('Error fetching employers:', error);
+      setEmployers([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleShowDetail = (employer) => {
@@ -62,30 +71,29 @@ const EmployerManagement = () => {
     setShowDetailModal(true);
   };
 
-  const handleVerify = (employerId) => {
-    fetch(`https://localhost:7266/api/Employer/${employerId}/verify`, { method: "PATCH" })
-      .then((res) => {
-        if (res.ok) {
-          setAlertMsg("Account verified!");
-          fetchEmployers();
-        } else {
-          setAlertMsg("Verification failed.");
-        }
-      })
-      .catch(() => setAlertMsg("Verification failed."));
+  const handleVerify = async (employerId) => {
+    try {
+      await ApiService.verifyCompany(employerId);
+      setAlertMsg("Account verified!");
+      fetchEmployers();
+    } catch (error) {
+      console.error('Error verifying employer:', error);
+      setAlertMsg("Verification failed.");
+    }
   };
 
-  const handleToggleLock = (employerId, isLocked) => {
-    fetch(`https://localhost:7266/api/Employer/${employerId}/${isLocked ? "unlock" : "lock"}`, { method: "PATCH" })
-      .then((res) => {
-        if (res.ok) {
-          setAlertMsg(isLocked ? "Account unlocked." : "Account locked.");
-          fetchEmployers();
-        } else {
-          setAlertMsg("Operation failed.");
-        }
-      })
-      .catch(() => setAlertMsg("Operation failed."));
+  const handleToggleLock = async (employerId, isLocked) => {
+    try {
+      await ApiService.request(
+        `CompanyProfile/${employerId}/${isLocked ? "unlock" : "lock"}`,
+        'PUT'
+      );
+      setAlertMsg(isLocked ? "Account unlocked." : "Account locked.");
+      fetchEmployers();
+    } catch (error) {
+      console.error('Error toggling lock:', error);
+      setAlertMsg("Operation failed.");
+    }
   };
 
   const handleShowEdit = (employer) => {
@@ -118,7 +126,7 @@ const EmployerManagement = () => {
       isVerified: editEmployer.IsVerified,
       website: editEmployer.Website,
       contact: editEmployer.Contact,
-      industry: editEmployer.Industry
+      industryId: editEmployer.IndustryId
     };
     fetch(`${API_URL}/${editEmployer.Id}`, {
       method: "PUT",
@@ -138,7 +146,7 @@ const EmployerManagement = () => {
   };
 
   // Lấy danh sách industry duy nhất từ employers
-  const industryList = Array.from(new Set(employers.map(e => e.Industry).filter(Boolean)));
+  const industryList = Array.from(new Set(employers.map(e => e.IndustryId).filter(Boolean)));
   // Lấy danh sách team size mẫu
   const teamSizeOptions = [
     { label: 'All', value: 'all' },
@@ -168,7 +176,7 @@ const EmployerManagement = () => {
       else if (filterTeamSize === '501+') matchTeamSize = num >= 501;
     }
     // Industry
-    const matchIndustry = filterIndustry === 'all' || emp.Industry === filterIndustry;
+    const matchIndustry = filterIndustry === 'all' || emp.IndustryId === filterIndustry;
     return matchSearch && matchStatus && matchTeamSize && matchIndustry;
   });
 
@@ -178,6 +186,12 @@ const EmployerManagement = () => {
 
   // Reset page về 1 khi filter/search thay đổi
   useEffect(() => { setCurrentPage(1); }, [search, filterStatus, filterTeamSize, filterIndustry]);
+
+  // Helper để lấy tên ngành từ id
+  const getIndustryName = (id) => {
+    const found = industries.find(ind => ind.industryId === id);
+    return found ? found.industryName : id;
+  };
 
   return (
     <div className="page-wrapper dashboard" style={{background:'#f7f8fa', minHeight:'100vh'}}>
@@ -302,7 +316,7 @@ const EmployerManagement = () => {
                                 <div className="employer-meta">
                                   <span><i className="fa fa-map-marker-alt" style={{marginRight:4}}></i> {emp.Location}</span>
                                   <span><i className="fa fa-users" style={{marginRight:4}}></i> {emp.TeamSize}</span>
-                                  {emp.Industry && <span><i className="fa fa-briefcase" style={{marginRight:4}}></i> {emp.Industry}</span>}
+                                  <span><i className="fa fa-briefcase" style={{marginRight:4}}></i> {getIndustryName(emp.IndustryId)}</span>
                                   {emp.IsVerified ? (
                                     <span className="badge bg-success">Verified</span>
                                   ) : (
@@ -368,6 +382,7 @@ const EmployerManagement = () => {
                 <p><b>Email/Phone:</b> {selectedEmployer.Contact}</p>
                 <p><b>Description:</b> {selectedEmployer.companyProfileDescription}</p>
                 <p><b>Status:</b> {selectedEmployer.IsVerified ? "Verified" : "Pending Approval"}</p>
+                <p><b>Industry:</b> {getIndustryName(selectedEmployer.IndustryId)}</p>
               </div>
               <div className="modal-footer">
                 <button className="btn btn-secondary" onClick={()=>setShowDetailModal(false)}>Close</button>
@@ -409,7 +424,7 @@ const EmployerManagement = () => {
                   </div>
                   <div className="mb-2">
                     <label>Industry</label>
-                    <input className="form-control" name="Industry" value={editEmployer.Industry} onChange={handleEditChange} />
+                    <input className="form-control" name="IndustryId" value={editEmployer.IndustryId} onChange={handleEditChange} />
                   </div>
                   <div className="mb-2">
                     <label>Contact</label>

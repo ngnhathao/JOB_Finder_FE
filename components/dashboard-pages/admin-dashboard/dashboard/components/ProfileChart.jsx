@@ -11,6 +11,8 @@ import {
   Legend,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
+import ApiService from '../../../../../services/api.service';
+import API_CONFIG from '../../../../../config/api.config';
 
 ChartJS.register(
   CategoryScale,
@@ -33,12 +35,10 @@ const ProfileChart = () => {
     const fetchChartData = async () => {
       try {
         // Fetch users data
-        const usersResponse = await fetch('https://localhost:7266/api/User');
-        const usersData = await usersResponse.json();
+        const usersData = await ApiService.get('/' + API_CONFIG.ENDPOINTS.USER.BASE);
         
         // Fetch jobs data
-        const jobsResponse = await fetch('https://localhost:7266/api/Job');
-        const jobsData = await jobsResponse.json();
+        const jobsData = await ApiService.get('/' + API_CONFIG.ENDPOINTS.JOB.BASE);
 
         // Process data based on time range
         const now = new Date();

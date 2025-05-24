@@ -1,27 +1,75 @@
 'use client'
 
-import { useState } from "react";
+import Map from "../../../Map";
+import { useState, useEffect } from "react";
 // import Map from "../../../Map";
 import Select from "react-select";
 import { useRouter } from 'next/navigation';
+import ApiService from "../../../../../services/api.service";
+import { authService } from "../../../../../services/authService";
+import API_CONFIG from "../../../../../config/api.config";
+import Cookies from "js-cookie";
+import axios from "axios";
 
 const PostBoxForm = () => {
+  const specialisms = [
+    { value: "Banking", label: "Banking" },
+    { value: "Digital & Creative", label: "Digital & Creative" },
+    { value: "Retail", label: "Retail" },
+    { value: "Human Resources", label: "Human Resources" },
+    { value: "Managemnet", label: "Managemnet" },
+    { value: "Accounting & Finance", label: "Accounting & Finance" },
+    { value: "Digital", label: "Digital" },
+    { value: "Creative Art", label: "Creative Art" },
+  ];
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
+    jobId: 0,
     title: '',
     description: '',
-    companyId: '', // This will be set from the logged-in company
-    salary: '',
-    industryId: '',
+    companyId: 0,
+    salary: "",
+    industryId: 0,
     expiryDate: '',
-    levelId: '',
-    jobTypeId: '',
-    experienceId: '',
+    levelId: 0,
+    jobTypeId: 0,
+    experienceLevelId: 0,
     timeStart: '',
     timeEnd: '',
-    status: 'active', // Default status
-    imageJob: null
+    status: 0,
+    provinceName: '',
+    addressDetail: '',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   });
+
+  const [levels, setLevels] = useState([]);
+  const [industries, setIndustries] = useState([]);
+  const [jobTypes, setJobTypes] = useState([]);
+  const [experienceLevels, setExperienceLevels] = useState([]);
+  const [provinces, setProvinces] = useState([]);
+
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  // Lấy thông tin user từ localStorage hoặc cookies
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    ApiService.get(API_CONFIG.ENDPOINTS.LEVEL).then(setLevels);
+    ApiService.get(API_CONFIG.ENDPOINTS.JOB_TYPE).then(setJobTypes);
+    ApiService.get(API_CONFIG.ENDPOINTS.EXPERIENCE_LEVEL).then(setExperienceLevels);
+    ApiService.get(API_CONFIG.ENDPOINTS.INDUSTRY).then(setIndustries);
+    axios.get("https://provinces.open-api.vn/api/p/")
+      .then(res => setProvinces(res.data))
+      .catch(() => setProvinces([]));
+    // Lấy userId từ localStorage hoặc cookies
+    const userId = localStorage.getItem('userId') || Cookies.get('userId');
+    const userRole = localStorage.getItem('role') || Cookies.get('role');
+    setUser({ userId, role: userRole });
+  }, []);
 
   const [errors, setErrors] = useState({});
 
@@ -46,8 +94,8 @@ const PostBoxForm = () => {
     if (!formData.jobTypeId) {
       newErrors.jobTypeId = 'Job type is required';
     }
-    if (!formData.experienceId) {
-      newErrors.experienceId = 'Experience is required';
+    if (!formData.experienceLevelId) {
+      newErrors.experienceLevelId = 'Experience level is required';
     }
     if (!formData.expiryDate) {
       newErrors.expiryDate = 'Application deadline is required';
@@ -58,25 +106,33 @@ const PostBoxForm = () => {
     if (!formData.timeEnd) {
       newErrors.timeEnd = 'End date is required';
     }
-    if (!formData.imageJob) {
-      newErrors.imageJob = 'Job image is required';
+    if (!formData.provinceName) {
+      newErrors.provinceName = 'Province is required';
+    }
+    if (!formData.addressDetail) {
+      newErrors.addressDetail = 'Address detail is required';
     }
 
     // Validate dates
+    if (formData.timeStart) {
+      const startDate = new Date(formData.timeStart);
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      if (startDate < today) {
+        newErrors.timeStart = 'Start date cannot be in the past';
+      }
+    }
     if (formData.timeStart && formData.timeEnd) {
       const startDate = new Date(formData.timeStart);
       const endDate = new Date(formData.timeEnd);
-      
       if (endDate <= startDate) {
         newErrors.timeEnd = 'End date must be after start date';
       }
     }
-
     if (formData.timeStart && formData.timeEnd && formData.expiryDate) {
       const startDate = new Date(formData.timeStart);
       const endDate = new Date(formData.timeEnd);
       const expiryDate = new Date(formData.expiryDate);
-      
       if (expiryDate < startDate || expiryDate > endDate) {
         newErrors.expiryDate = 'Application deadline must be between start date and end date';
       }
@@ -90,7 +146,14 @@ const PostBoxForm = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: [
+        "industryId",
+        "levelId",
+        "jobTypeId",
+        "experienceLevelId"
+      ].includes(name)
+        ? Number(value)
+        : value
     }));
     // Clear error when user starts typing
     if (errors[name]) {
@@ -101,33 +164,66 @@ const PostBoxForm = () => {
     }
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    setFormData(prev => ({
-      ...prev,
-      imageJob: file
-    }));
-    // Clear error when user selects an image
-    if (errors.imageJob) {
-      setErrors(prev => ({
-        ...prev,
-        imageJob: ''
-      }));
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    console.log("Submit clicked", formData, user);
+    setError("");
+    setSuccess(false);
+
     if (!validateForm()) {
+      setError("Vui lòng điền đầy đủ thông tin!");
       return;
     }
-    
-    // Store form data in localStorage before navigating to payment
-    localStorage.setItem('pendingJobData', JSON.stringify(formData));
-    
-    // Navigate to payment page
-    router.push('/employers-dashboard/packages');
+
+    if (!user?.userId || user.role !== 'Company') {
+      setError("Bạn phải đăng nhập bằng tài khoản công ty để đăng tin tuyển dụng.");
+      return;
+    }
+
+    try {
+      const jobData = {
+        title: formData.title,
+        description: formData.description,
+        companyId: user.userId,
+        salary: Number(formData.salary),
+        industryId: Number(formData.industryId),
+        expiryDate: formData.expiryDate,
+        levelId: Number(formData.levelId),
+        jobTypeId: Number(formData.jobTypeId),
+        experienceLevelId: Number(formData.experienceLevelId),
+        timeStart: formData.timeStart,
+        timeEnd: formData.timeEnd,
+        status: 0,
+        provinceName: formData.provinceName,
+        addressDetail: formData.addressDetail
+      };
+      const result = await ApiService.post("/Job/create", jobData);
+      console.log("API gọi thành công", result);
+      setSuccess(true);
+      setShowSuccessModal(true);
+      setFormData({
+        jobId: 0,
+        title: '',
+        description: '',
+        companyId: 0,
+        salary: "",
+        industryId: 0,
+        expiryDate: '',
+        levelId: 0,
+        jobTypeId: 0,
+        experienceLevelId: 0,
+        timeStart: '',
+        timeEnd: '',
+        status: 0,
+        provinceName: '',
+        addressDetail: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("API lỗi:", error);
+      setError("Tạo job thất bại: " + error.message);
+    }
   };
 
   return (
@@ -143,6 +239,7 @@ const PostBoxForm = () => {
             onChange={handleInputChange}
             placeholder="Enter job title" 
             className={errors.title ? 'error' : ''}
+            disabled={isLoading}
           />
           {errors.title && <span className="error-message">{errors.title}</span>}
         </div>
@@ -156,6 +253,7 @@ const PostBoxForm = () => {
             onChange={handleInputChange}
             placeholder="Enter job description"
             className={errors.description ? 'error' : ''}
+            disabled={isLoading}
           ></textarea>
           {errors.description && <span className="error-message">{errors.description}</span>}
         </div>
@@ -170,6 +268,7 @@ const PostBoxForm = () => {
             onChange={handleInputChange}
             placeholder="Enter salary amount"
             className={errors.salary ? 'error' : ''}
+            disabled={isLoading}
           />
           {errors.salary && <span className="error-message">{errors.salary}</span>}
         </div>
@@ -182,13 +281,12 @@ const PostBoxForm = () => {
             value={formData.industryId}
             onChange={handleInputChange}
             className={`chosen-single form-select ${errors.industryId ? 'error' : ''}`}
+            disabled={isLoading}
           >
             <option value="">Select Industry</option>
-            <option value="1">Technology</option>
-            <option value="2">Finance</option>
-            <option value="3">Healthcare</option>
-            <option value="4">Education</option>
-            <option value="5">Manufacturing</option>
+            {industries.map(ind => (
+              <option key={ind.industryId} value={ind.industryId}>{ind.industryName}</option>
+            ))}
           </select>
           {errors.industryId && <span className="error-message">{errors.industryId}</span>}
         </div>
@@ -201,12 +299,12 @@ const PostBoxForm = () => {
             value={formData.levelId}
             onChange={handleInputChange}
             className={`chosen-single form-select ${errors.levelId ? 'error' : ''}`}
+            disabled={isLoading}
           >
             <option value="">Select Level</option>
-            <option value="1">Entry Level</option>
-            <option value="2">Mid Level</option>
-            <option value="3">Senior Level</option>
-            <option value="4">Executive Level</option>
+            {levels.map((level, idx) => (
+              <option key={level.id || idx} value={level.id}>{level.levelName}</option>
+            ))}
           </select>
           {errors.levelId && <span className="error-message">{errors.levelId}</span>}
         </div>
@@ -219,34 +317,32 @@ const PostBoxForm = () => {
             value={formData.jobTypeId}
             onChange={handleInputChange}
             className={`chosen-single form-select ${errors.jobTypeId ? 'error' : ''}`}
+            disabled={isLoading}
           >
             <option value="">Select Job Type</option>
-            <option value="1">Full-time</option>
-            <option value="2">Part-time</option>
-            <option value="3">Contract</option>
-            <option value="4">Internship</option>
-            <option value="5">Remote</option>
+            {jobTypes.map(type => (
+              <option key={type.id} value={type.id}>{type.jobTypeName}</option>
+            ))}
           </select>
           {errors.jobTypeId && <span className="error-message">{errors.jobTypeId}</span>}
         </div>
 
-        {/* Experience */}
+        {/* Experience Level */}
         <div className="form-group col-lg-6 col-md-12">
-          <label>Experience</label>
+          <label>Experience Level</label>
           <select 
-            name="experienceId" 
-            value={formData.experienceId}
+            name="experienceLevelId" 
+            value={formData.experienceLevelId}
             onChange={handleInputChange}
-            className={`chosen-single form-select ${errors.experienceId ? 'error' : ''}`}
+            className={`chosen-single form-select ${errors.experienceLevelId ? 'error' : ''}`}
+            disabled={isLoading}
           >
-            <option value="">Select Experience</option>
-            <option value="1">0-1 years</option>
-            <option value="2">1-3 years</option>
-            <option value="3">3-5 years</option>
-            <option value="4">5-10 years</option>
-            <option value="5">10+ years</option>
+            <option value="">Select Experience Level</option>
+            {experienceLevels.map(level => (
+              <option key={level.id} value={level.id}>{level.name}</option>
+            ))}
           </select>
-          {errors.experienceId && <span className="error-message">{errors.experienceId}</span>}
+          {errors.experienceLevelId && <span className="error-message">{errors.experienceLevelId}</span>}
         </div>
 
         {/* Expiry Date */}
@@ -258,6 +354,7 @@ const PostBoxForm = () => {
             value={formData.expiryDate}
             onChange={handleInputChange}
             className={`form-control ${errors.expiryDate ? 'error' : ''}`}
+            disabled={isLoading}
           />
           {errors.expiryDate && <span className="error-message">{errors.expiryDate}</span>}
         </div>
@@ -271,6 +368,7 @@ const PostBoxForm = () => {
             value={formData.timeStart}
             onChange={handleInputChange}
             className={`form-control ${errors.timeStart ? 'error' : ''}`}
+            disabled={isLoading}
           />
           {errors.timeStart && <span className="error-message">{errors.timeStart}</span>}
         </div>
@@ -284,47 +382,70 @@ const PostBoxForm = () => {
             value={formData.timeEnd}
             onChange={handleInputChange}
             className={`form-control ${errors.timeEnd ? 'error' : ''}`}
+            disabled={isLoading}
           />
           {errors.timeEnd && <span className="error-message">{errors.timeEnd}</span>}
         </div>
 
-        {/* Job Image */}
-        <div className="form-group col-lg-12 col-md-12">
-          <label>Job Image</label>
-          <div className="file-upload-wrapper">
-            <div className="file-upload-input-wrapper">
-              <input 
-                type="file" 
-                name="imageJob" 
-                onChange={handleImageChange}
-                accept="image/*"
-                id="job-image-upload"
-                className={`file-upload-input ${errors.imageJob ? 'error' : ''}`}
-              />
-              <label htmlFor="job-image-upload" className={`file-upload-label ${errors.imageJob ? 'error' : ''}`}>
-                <i className="fas fa-cloud-upload-alt"></i>
-                <span>Choose a file or drag it here</span>
-              </label>
-            </div>
-            {formData.imageJob && (
-              <div className="file-preview">
-                <img 
-                  src={URL.createObjectURL(formData.imageJob)} 
-                  alt="Preview" 
-                  className="preview-image"
-                />
-                <span className="file-name">{formData.imageJob.name}</span>
-              </div>
-            )}
-            {errors.imageJob && <span className="error-message">{errors.imageJob}</span>}
-          </div>
+        {/* Province Name */}
+        <div className="form-group col-lg-6 col-md-12">
+          <label>Province</label>
+          <select 
+            name="provinceName" 
+            value={formData.provinceName}
+            onChange={handleInputChange}
+            className={errors.provinceName ? 'error' : ''}
+            disabled={isLoading}
+          >
+            <option value="">Select Province</option>
+            {provinces.map(p => (
+              <option key={p.code} value={p.name}>{p.name}</option>
+            ))}
+          </select>
+          {errors.provinceName && <span className="error-message">{errors.provinceName}</span>}
+        </div>
+
+        {/* Address Detail */}
+        <div className="form-group col-lg-6 col-md-12">
+          <label>Address Detail</label>
+          <input 
+            type="text" 
+            name="addressDetail" 
+            value={formData.addressDetail}
+            onChange={handleInputChange}
+            placeholder="Enter address detail"
+            className={errors.addressDetail ? 'error' : ''}
+            disabled={isLoading}
+          />
+          {errors.addressDetail && <span className="error-message">{errors.addressDetail}</span>}
         </div>
 
         {/* Submit Button */}
         <div className="form-group col-lg-12 col-md-12 text-right">
-          <button type="submit" className="theme-btn btn-style-one">Post Job</button>
+          <button 
+            type="submit" 
+            className="theme-btn btn-style-one"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Posting...' : 'Post Job'}
+          </button>
         </div>
       </div>
+
+      {showSuccessModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Success!</h3>
+            <p>Post job successfully!</p>
+            <button
+              className="theme-btn btn-style-one"
+              onClick={() => window.location.reload()}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .form-control {
@@ -335,110 +456,69 @@ const PostBoxForm = () => {
           font-size: 14px;
           background-color: #fff;
         }
-
         .form-control:focus {
           outline: none;
           border-color: #4a90e2;
           box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
         }
-
         .error {
           border-color: #dc3545 !important;
         }
-
         .error-message {
           color: #dc3545;
           font-size: 12px;
           margin-top: 5px;
           display: block;
         }
-
         input[type="date"] {
-          position: relative;
           cursor: pointer;
         }
-
         input[type="date"]::-webkit-calendar-picker-indicator {
           cursor: pointer;
           padding: 5px;
         }
-
-        .file-upload-wrapper {
-          width: 100%;
-          margin-top: 10px;
+        button:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
         }
-
-        .file-upload-input-wrapper {
+        .theme-btn {
           position: relative;
-          width: 100%;
         }
-
-        .file-upload-input {
-          position: absolute;
-          left: 0;
-          top: 0;
-          width: 100%;
-          height: 100%;
-          opacity: 0;
-          cursor: pointer;
-          z-index: 2;
+        .theme-btn:disabled {
+          background-color: #ccc;
         }
-
-        .file-upload-label {
+        .modal-overlay {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(0,0,0,0.4);
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 10px;
-          width: 100%;
-          padding: 20px;
-          background-color: #f8f9fa;
-          border: 2px dashed #ddd;
+          z-index: 9999;
+        }
+        .modal-content {
+          background: #fff;
           border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.3s ease;
+          padding: 24px 16px;
+          text-align: center;
+          width: 100%;
+          max-width: 350px;
+          min-width: 0;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+          box-sizing: border-box;
         }
-
-        .file-upload-label.error {
-          border-color: #dc3545;
+        @media (max-width: 400px) {
+          .modal-content {
+            max-width: 95vw;
+            padding: 16px 4vw;
+          }
         }
-
-        .file-upload-label:hover {
-          border-color: #4a90e2;
-          background-color: #f0f7ff;
+        .modal-content h3 {
+          margin-bottom: 12px;
+          color: #28a745;
         }
-
-        .file-upload-label i {
-          font-size: 24px;
-          color: #4a90e2;
-        }
-
-        .file-upload-label span {
-          color: #666;
-          font-size: 14px;
-        }
-
-        .file-preview {
-          margin-top: 15px;
-          display: flex;
-          align-items: center;
-          gap: 15px;
-          padding: 10px;
-          background-color: #fff;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-        }
-
-        .preview-image {
-          width: 60px;
-          height: 60px;
-          object-fit: cover;
-          border-radius: 4px;
-        }
-
-        .file-name {
-          color: #333;
-          font-size: 14px;
-          word-break: break-all;
+        .modal-content button {
+          margin-top: 16px;
         }
       `}</style>
     </form>

@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react';
+import ApiService from '../../../../../services/api.service';
+import API_CONFIG from '../../../../../config/api.config';
 
 const TopCardBlock = () => {
   const [stats, setStats] = useState({
@@ -18,16 +20,14 @@ const TopCardBlock = () => {
     const fetchStats = async () => {
       try {
         // Fetch users data
-        const usersResponse = await fetch('https://localhost:7266/api/User');
-        const usersData = await usersResponse.json();
+        const usersData = await ApiService.get('/' + API_CONFIG.ENDPOINTS.USER.BASE);
         
         // Count users by role
         const totalUsers = usersData.filter(user => user.role === 'Candidate').length;
         const totalEmployers = usersData.filter(user => user.role === 'Company').length;
 
         // Fetch jobs data
-        const jobsResponse = await fetch('https://localhost:7266/api/Job');
-        const jobsData = await jobsResponse.json();
+        const jobsData = await ApiService.get('/' + API_CONFIG.ENDPOINTS.JOB.BASE);
         
         // Count active jobs
         const activeJobs = jobsData.filter(job => job.status === 'Active').length;

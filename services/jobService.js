@@ -5,13 +5,46 @@ const API_URL = "https://localhost:7266/api";
 // Cấu hình axios
 axios.defaults.headers.common['Content-Type'] = 'application/json';
 
-// Danh sách job types mẫu
-const JOB_TYPES = [
-  { type: "Full Time", styleClass: "time" },
-  { type: "Part Time", styleClass: "privacy" },
-  { type: "Freelance", styleClass: "urgent" },
-  { type: "Temporary", styleClass: "time" }
-];
+
+// Map job types
+const JOB_TYPES = {
+  1: "Full-time",
+  2: "Part-time",
+  3: "Contract",
+  4: "Internship"
+};
+
+
+// Map experience levels
+const EXPERIENCE_LEVELS = {
+  1: "Entry Level",
+  2: "Junior",
+  3: "Mid Level",
+  4: "Senior",
+  5: "Lead"
+};
+
+
+// Map industries
+const INDUSTRIES = {
+  1: "Technology",
+  2: "Finance",
+  3: "Healthcare",
+  4: "Education",
+  5: "Marketing"
+};
+
+
+// Map job levels
+const JOB_LEVELS = {
+  1: "Intern",
+  2: "Junior",
+  3: "Middle",
+  4: "Senior",
+  5: "Lead",
+  6: "Manager"
+};
+
 
 // Danh sách categories mẫu
 const CATEGORIES = [
@@ -25,8 +58,39 @@ const CATEGORIES = [
   "Education"
 ];
 
+
+// Danh sách job titles mẫu
+const JOB_TITLES = [
+  "Software Engineer",
+  "Frontend Developer",
+  "Backend Developer",
+  "Full Stack Developer",
+  "UI/UX Designer",
+  "Product Manager",
+  "Data Scientist",
+  "DevOps Engineer",
+  "Mobile Developer",
+  "QA Engineer"
+];
+
+
+// Danh sách companies mẫu
+const COMPANIES = [
+  "Tech Solutions Inc.",
+  "Digital Innovations",
+  "Future Systems",
+  "Smart Tech",
+  "Global Software",
+  "Innovative Solutions",
+  "Tech Pioneers",
+  "Digital Dynamics",
+  "Future Technologies",
+  "Smart Solutions"
+];
+
+
 export const jobService = {
-  getJobs: async (filters = {}) => {
+  async getJobs(filters = {}) {
     try {
       // Hoàn tác: Gọi lại endpoint /api/Job và loại bỏ truyền filters tùy chỉnh
       console.log('Calling backend API at endpoint /api/Job'); // Log endpoint gọi đi
@@ -87,13 +151,18 @@ export const jobService = {
       }
 
        if (filters.jobType?.length) {
-         // Lọc theo JobTypeId - cần ánh xạ từ ID sang tên nếu API không trả về tên
-         // hoặc kiểm tra JobTypeId trực tiếp nếu JobType component gửi ID
-         // Hiện tại jobType state trong FilterSidebar đang lưu ID
+         // Lọc theo JobTypeId
          filteredJobs = filteredJobs.filter(job =>
            filters.jobType.includes(job.jobTypeId)
          );
        }
+
+        if (filters.category) { // filters.category hiện đang là IndustryId
+          filteredJobs = filteredJobs.filter(job =>
+             // Lọc dựa trên IndustryId
+             job.industryId === parseInt(filters.category) // So sánh IndustryId số nguyên
+          );
+        }
 
        if (filters.salary?.min !== undefined) { // Kiểm tra rõ ràng undefined
          filteredJobs = filteredJobs.filter(job =>
@@ -107,13 +176,21 @@ export const jobService = {
          );
        }
 
-      // Các bộ lọc frontend khác cần được thêm lại tại đây nếu cần (category, datePosted, experience, tag, sort)
+       if (filters.experience?.length) { // filters.experience hiện đang là mảng ExperienceLevelIds
+         filteredJobs = filteredJobs.filter(job =>
+           // Lọc dựa trên ExperienceLevelId
+            filters.experience.includes(job.experienceLevelId) // So sánh ExperienceLevelId số nguyên
+         );
+       }
+
+      // Các bộ lọc frontend khác cần được thêm lại tại đây nếu cần (datePosted, tag, sort)
 
       // Áp dụng pagination (frontend)
       const total = filteredJobs.length; // Tổng số kết quả sau khi lọc frontend
       const start = filters.page ? (filters.page - 1) * (filters.limit || 10) : 0;
       const end = filters.limit ? start + filters.limit : filteredJobs.length;
       const paginatedJobs = filteredJobs.slice(start, end);
+
 
       return {
         data: paginatedJobs, // Trả về dữ liệu đã được frontend lọc và phân trang
@@ -125,6 +202,7 @@ export const jobService = {
       return { data: [], total: 0 };
     }
   },
+
 
   getJobById: async (id) => {
     try {
@@ -203,6 +281,7 @@ export const jobService = {
     }
   },
 
+
   getJobCategories: async () => {
      // Nếu API backend không có endpoint riêng cho categories, bạn có thể cần
      // tạo danh sách category dựa trên Industry hoặc JobType từ lookup data.
@@ -233,19 +312,40 @@ export const jobService = {
      }));
   },
 
+
   getCompanies: async () => {
     try {
-      const response = await axios.get(`${API_URL}/Company`);
-      // Dữ liệu từ API Company có thể khác cấu trúc mẫu ban đầu.
-      // Ánh xạ dữ liệu từ API vào cấu trúc frontend mong đợi.
+      // Use the correct endpoint for CompanyProfile
+      const response = await axios.get(`${API_URL}/CompanyProfile`);
+      // Map the response data to the expected structure
       return response.data.map(company => ({
-        id: company.Id, // Sử dụng ID từ API nếu có trường ID
-        name: company.Name, // Sử dụng Name từ API
-        logo: company.Logo || '/images/company-logo/default-logo.png' // Sử dụng Logo từ API
+        id: company.userId, // Use userId from API as id
+        name: company.companyName, // Use companyName from API as name
+        logo: company.urlCompanyLogo || '/images/company-logo/default-logo.png' // Use urlCompanyLogo from API
       }));
     } catch (error) {
       console.error("Error fetching companies:", error);
-      throw error; // Ném lỗi để component gọi xử lý
+      throw error; // Throw error for calling component to handle
+    }
+  },
+
+  // Add a function to fetch provinces
+  getProvinces: async () => {
+    try {
+      // Use the public API for provinces
+      const response = await axios.get(`https://provinces.open-api.vn/api/p/`); // Call the public API endpoint for provinces
+      // Dữ liệu trả về dạng [{ code: "01", name: "Thành phố Hà Nội", ... }, ...]
+      // Ánh xạ dữ liệu để có cấu trúc { id: ..., name: ... }
+      return response.data.map(province => ({
+        id: province.code, // Sử dụng 'code' từ API làm 'id'
+        name: province.name // Sử dụng 'name' từ API làm 'name'
+      }));
+    } catch (error) {
+      console.error("Error fetching provinces:", error);
+      // Trả về mảng rỗng khi có lỗi
+      return [];
     }
   }
 };
+
+

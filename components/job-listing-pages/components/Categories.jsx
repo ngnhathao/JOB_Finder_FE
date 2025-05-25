@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { addCategory } from "../../../features/filter/filterSlice";
 
-// Nhận industries từ props
-const Categories = ({ industries }) => {
+// Nhận industries từ props và prop onSelectIndustry
+const Categories = ({ industries, onSelectIndustry }) => {
     const { jobList } = useSelector((state) => state.filter) || {};
     // Không cần state getCategory/setCategory riêng nữa
     // const [getCategory, setCategory] = useState(jobList.category);
@@ -16,6 +16,10 @@ const Categories = ({ industries }) => {
     const categoryHandler = (e) => {
          // Dispatch giá trị (industryId) của category được chọn
         dispatch(addCategory(e.target.value));
+        // Call the handler passed from parent
+        if (onSelectIndustry) {
+            onSelectIndustry(e.target.value);
+        }
     };
 
     // Không cần useEffect để cập nhật state category riêng nữa

@@ -6,9 +6,8 @@ import MenuToggler from "../../MenuToggler";
 import DashboardHeader from "../../../header/DashboardHeaderAdmin";
 import Link from "next/link";
 import "./user-manager-animations.css";
-
-
-const API_URL = "https://localhost:7266/api/User";
+import ApiService from "../../../../services/api.service";
+import API_CONFIG from '../../../../config/api.config';
 
 const roleOptions = [
   { id: 1, name: "Candidate" },
@@ -35,6 +34,8 @@ const UserManager = () => {
   const [filterRole, setFilterRole] = useState('all');
   const [filterLock, setFilterLock] = useState('all');
   const [selectedImageFile, setSelectedImageFile] = useState(null);
+  const [editUser, setEditUser] = useState(null);
+  const [editError, setEditError] = useState("");
 
   // Tự động ẩn alert sau 2.5s
   useEffect(() => {
@@ -44,27 +45,22 @@ const UserManager = () => {
     }
   }, [alertMsg]);
 
-  // Fetch user list
-  const fetchUsers = () => {
-    setLoading(true);
-    fetch(API_URL)
-      .then((res) => res.json())
-      .then((data) => {
-        console.log('User list:', data); // Log dữ liệu trả về từ API
-        // Map thêm roleId dựa vào role (chuỗi)
-        const mapped = data.map(user => ({
-          ...user,
-          roleId: roleOptions.find(r => r.name === user.role)?.id || 1,
-          image: user.image || '' // Ensure image field exists and is a string
-        }));
-        setUsers(mapped);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  };
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const data = await ApiService.get('/' + API_CONFIG.ENDPOINTS.USER.BASE);
+      setUsers(data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Lọc user theo search và filter
   const filteredUsers = users.filter(user => {
@@ -95,13 +91,9 @@ const UserManager = () => {
     setShowDetailModal(true);
   };
   const handleShowEdit = (user) => {
-    setFormUser({
-      ...user,
-      roleId: roleOptions.find(r => r.name === user.role)?.id || 1,
-      password: "",
-      image: user.image || '' // Use correct field name
-    });
-    setSelectedUser(user);
+    setEditUser({ ...user });
+    setFormUser({ ...user });
+    setEditError("");
     setShowEditModal(true);
     setFormError("");
     setSelectedImageFile(null);
@@ -116,32 +108,26 @@ const UserManager = () => {
     setSelectedUser(user);
     setShowDeleteModal(true);
   };
-  const handleDelete = () => {
-    fetch(`${API_URL}/${selectedUser.id}`, { method: "DELETE" })
-      .then((res) => {
-        if (res.ok) {
-          setAlertMsg("User deleted successfully!");
-          fetchUsers();
-        } else {
-          setAlertMsg("Failed to delete user.");
-        }
-        setShowDeleteModal(false);
-      })
-      .catch(() => setAlertMsg("Failed to delete user."));
+  const handleDelete = async () => {
+    try {
+      await ApiService.deleteUser(selectedUser.id);
+      setAlertMsg("User deleted successfully!");
+      fetchUsers();
+    } catch (error) {
+      setAlertMsg("Failed to delete user.");
+    }
+    setShowDeleteModal(false);
   };
-  const handleToggleLock = (user) => {
-    const isLocked = user.isActive === false;
-    const action = isLocked ? 'unlock' : 'lock';
-    fetch(`${API_URL}/${user.id}/${action}`, { method: "PUT" })
-      .then((res) => {
-        if (res.ok) {
-          setAlertMsg(`User ${isLocked ? 'unlocked' : 'locked'} successfully!`);
-          setTimeout(fetchUsers, 300);
-        } else {
-          setAlertMsg(`Failed to ${action} user.`);
-        }
-      })
-      .catch(() => setAlertMsg(`Failed to ${action} user.`));
+  const handleToggleLock = async (user) => {
+    try {
+      const isLocked = user.isActive === false;
+      const action = isLocked ? 'unlock' : 'lock';
+      await ApiService.request(`users/${user.id}/${action}`, 'PUT');
+      setAlertMsg(`User ${isLocked ? 'unlocked' : 'locked'} successfully!`);
+      setTimeout(fetchUsers, 300);
+    } catch (error) {
+      setAlertMsg(`Failed to ${action} user.`);
+    }
   };
 
   // Form handlers
@@ -189,24 +175,13 @@ const UserManager = () => {
         formData.append('image', formUser.image);
       }
 
-      fetch(API_URL, {
-        method: "POST",
-        body: formData,
-        // Remove Content-Type header to let the browser set it automatically with the boundary
-        headers: {
-          'Accept': 'application/json',
-        },
-      })
-        .then((res) => {
-          if (res.ok) {
-            setAlertMsg("User added successfully!");
-            fetchUsers();
-            setShowAddModal(false);
-          } else {
-            setFormError("Failed to add user.");
-          }
+      ApiService.addUser(formData)
+        .then(() => {
+          setAlertMsg("User added successfully!");
+          fetchUsers();
+          setShowAddModal(false);
         })
-        .catch(() => setFormError("Failed to add user."));
+        .catch((err) => setFormError(err.message || "Failed to add user."));
     } else if (showEditModal) {
       const formData = new FormData();
       formData.append('fullName', formUser.fullName);
@@ -219,25 +194,13 @@ const UserManager = () => {
         formData.append('image', formUser.image);
       }
 
-      console.log('PUT user:', formData, 'userId:', formUser.id);
-      fetch(`${API_URL}/${formUser.id}`, {
-        method: "PUT",
-        body: formData,
-        // Remove Content-Type header to let the browser set it automatically with the boundary
-        headers: {
-          'Accept': 'application/json',
-        },
-      })
-        .then((res) => {
-          if (res.ok) {
-            setAlertMsg("User updated successfully!");
-            fetchUsers();
-            setShowEditModal(false);
-          } else {
-            setFormError("Failed to update user.");
-          }
+      ApiService.updateUser(editUser.id, formData)
+        .then(() => {
+          setAlertMsg("User updated successfully!");
+          fetchUsers();
+          setShowEditModal(false);
         })
-        .catch(() => setFormError("Failed to update user."));
+        .catch((err) => setEditError(err.message || "Failed to update user."));
     }
   };
 
@@ -377,7 +340,7 @@ const UserManager = () => {
                   <button className="btn-close" onClick={()=>setShowEditModal(false)} type="button"></button>
                 </div>
                 <div className="modal-body">
-                  {formError && <div className="alert alert-danger">{formError}</div>}
+                  {editError && <div className="alert alert-danger">{editError}</div>}
                   <div className="mb-2">
                     <label>Profile Image</label>
                     <input 

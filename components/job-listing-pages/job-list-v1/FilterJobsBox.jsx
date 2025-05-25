@@ -1,5 +1,6 @@
 'use client'
 
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -23,6 +24,7 @@ import {
 } from "../../../features/job/jobSlice";
 import Image from "next/image";
 import { jobService } from "../../../services/jobService";
+
 
 const FilterJobsBox = () => {
   const [jobs, setJobs] = useState([]);
@@ -118,6 +120,7 @@ const FilterJobsBox = () => {
         setTotalJobs(response.total);
         setError(null);
       } catch (err) {
+        console.error('Error in fetchJobs:', err);
         setError('Failed to fetch jobs');
         console.error(err);
         setJobs([]);
@@ -126,6 +129,7 @@ const FilterJobsBox = () => {
         setLoading(false);
       }
     };
+
 
     fetchJobs();
   }, [keyword, location, destination, category, jobType, datePosted, experience, salary, tag, sort, currentPage, itemsPerPage]);
@@ -156,62 +160,50 @@ const FilterJobsBox = () => {
 
   // keyword filter on title
   const keywordFilter = (item) =>
-    keyword !== ""
-      ? item.jobTitle.toLocaleLowerCase().includes(keyword.toLocaleLowerCase())
-      : item;
+    keyword ? item.title.toLowerCase().includes(keyword.toLowerCase()) : true;
+
 
   // location filter
   const locationFilter = (item) =>
-    location !== ""
-      ? item?.location
-          ?.toLocaleLowerCase()
-          .includes(location?.toLocaleLowerCase())
-      : item;
+    location ? item?.industryId?.toLowerCase().includes(location.toLowerCase()) : true;
 
-  // location filter
+
+  // destination filter
   const destinationFilter = (item) =>
-    item?.destination?.min >= destination?.min &&
-    item?.destination?.max <= destination?.max;
+    destination?.min === 0 && destination?.max === 100 ? true :
+    item?.destination?.min >= destination?.min && item?.destination?.max <= destination?.max;
+
 
   // category filter
   const categoryFilter = (item) =>
-    category !== ""
-      ? item?.category?.toLocaleLowerCase() === category?.toLocaleLowerCase()
-      : item;
+    category ? item?.industryId?.toLowerCase() === category.toLowerCase() : true;
+
 
   // job-type filter
   const jobTypeFilter = (item) =>
-    jobType?.length !== 0 && item?.jobType !== undefined
-      ? jobType?.includes(
-          item?.jobType[0]?.type.toLocaleLowerCase().split(" ").join("-")
-        )
-      : item;
+    jobType?.length ? jobType.includes(item.jobTypeId) : true;
+
 
   // date-posted filter
   const datePostedFilter = (item) =>
-    datePosted !== "all" && datePosted !== ""
-      ? item?.created_at
-          ?.toLocaleLowerCase()
-          .split(" ")
-          .join("-")
-          .includes(datePosted)
-      : item;
+    datePosted && datePosted !== "all" ?
+    item?.createdAt?.toLowerCase().split(" ").join("-").includes(datePosted) : true;
+
 
   // experience level filter
   const experienceFilter = (item) =>
-    experience?.length !== 0
-      ? experience?.includes(
-          item?.experience?.split(" ").join("-").toLocaleLowerCase()
-        )
-      : item;
+    experience?.length ? experience.includes(item.experienceId) : true;
+
 
   // salary filter
   const salaryFilter = (item) =>
-    item?.totalSalary?.min >= salary?.min &&
-    item?.totalSalary?.max <= salary?.max;
+    salary?.min === 0 && salary?.max === 20000 ? true :
+    item.salary >= salary?.min && item.salary <= salary?.max;
+
 
   // tag filter
-  const tagFilter = (item) => (tag !== "" ? item?.tag === tag : item);
+  const tagFilter = (item) => tag ? item?.industryId === tag : true;
+
 
   // sort filter
   const sortFilter = (a, b) =>
@@ -219,12 +211,14 @@ const FilterJobsBox = () => {
 
   // Thêm handler cho nút Show More
   const handleShowMore = () => {
+    // Tăng số lượng hiển thị, kích hoạt fetch data mới
     setDisplayCount(prev => prev + 10);
   };
 
+
   let content = jobs
     ?.map((item) => (
-      <div className="job-block" key={item.id}>
+      <div className="job-block" key={item.jobId}>
         <div className="inner-box">
           <div className="content">
             {/* Restored Company Logo */}
@@ -250,6 +244,13 @@ const FilterJobsBox = () => {
                      {getIndustryName(item.industryId)}
                  </li>
                ) : null} */}
+              {/* Add Company Name here */}
+              {item.companyId ? (
+                <li>
+                  <span className="icon flaticon-building"></span>{/* Use building icon if available */}
+                  {getCompanyName(item.companyId)}
+                </li>
+              ) : null}
               <li>
                 <span className="icon flaticon-map-locator"></span>
                 {/* Chỉ hiển thị ProvinceName */}
@@ -292,11 +293,13 @@ const FilterJobsBox = () => {
       </div>
     ));
 
+
   // sort handler
   const sortHandler = (e) => {
     dispatch(addSort(e.target.value));
     setCurrentPage(1);
   };
+
 
   // per page handler
   const perPageHandler = (e) => {
@@ -333,9 +336,11 @@ const FilterJobsBox = () => {
     return <div className="text-center py-5">Loading...</div>;
   }
 
+
   if (error) {
     return <div className="text-center py-5 text-danger">{error}</div>;
   }
+
 
   return (
     <>
@@ -353,11 +358,13 @@ const FilterJobsBox = () => {
           </div>
           {/* Collapsible sidebar button */}
 
+
           <div className="text">
             Show <strong>{jobs?.length}</strong> of <strong>{totalJobs}</strong> jobs
           </div>
         </div>
         {/* End show-result */}
+
 
         <div className="sort-by">
           {keyword !== "" ||
@@ -383,6 +390,7 @@ const FilterJobsBox = () => {
             </button>
           ) : undefined}
 
+
           <select
             value={sort}
             className="chosen-single form-select"
@@ -393,6 +401,7 @@ const FilterJobsBox = () => {
             <option value="CreatedAtDesc">Oldest</option>
           </select>
           {/* End select */}
+
 
           <select
             onChange={perPageHandler}
@@ -410,13 +419,16 @@ const FilterJobsBox = () => {
       {/* End top filter bar box */}
       {content}
       {/* <!-- List Show More --> */}
-      {totalJobs > 0 && (
-        <div className="ls-pagination">
-          <p>Pagination component goes here...</p>
+      {jobs.length < totalJobs && !loading && (
+        <div className="btn-box mt-4 text-center">
+           <button className="theme-btn btn-style-one" onClick={handleShowMore}>
+              Show More
+           </button>
         </div>
       )}
     </>
   );
 };
+
 
 export default FilterJobsBox;

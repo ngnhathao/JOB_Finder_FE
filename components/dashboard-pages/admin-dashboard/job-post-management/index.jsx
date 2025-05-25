@@ -5,102 +5,73 @@ import BreadCrumb from "../../BreadCrumb";
 import MenuToggler from "../../MenuToggler";
 import DashboardHeader from "../../../header/DashboardHeaderAdmin";
 import "../user-manager/user-manager-animations.css";
-
-const API_URL = "https://localhost:7266/api/JobPost";
-
-// Fake data for development
-const fakeJobs = [
-  {
-    Id: 1,
-    Title: "Software Engineer (Android), Libraries",
-    Description: "Build and maintain Android libraries for our platform.",
-    CompanyId: 1,
-    CompanyName: "Segment",
-    Salary: "$35k - $45k",
-    IndustryId: 1,
-    Industry: "IT",
-    ExpiryDate: "2024-07-30",
-    LevelId: 2,
-    JobTypeId: 1,
-    ExperienceId: 2,
-    TimeStart: "2024-06-01",
-    TimeEnd: "2024-07-01",
-    Status: "Pending",
-    ImageJob: "https://cdn-icons-png.flaticon.com/512/5968/5968705.png",
-    CreatedAt: "2024-06-01",
-    UpdatedAt: "2024-06-01"
-  },
-  {
-    Id: 2,
-    Title: "Recruiting Coordinator",
-    Description: "Coordinate recruitment process and support HR team.",
-    CompanyId: 2,
-    CompanyName: "Catalyst",
-    Salary: "$35k - $45k",
-    IndustryId: 2,
-    Industry: "HR",
-    ExpiryDate: "2024-07-30",
-    LevelId: 1,
-    JobTypeId: 2,
-    ExperienceId: 1,
-    TimeStart: "2024-06-01",
-    TimeEnd: "2024-07-01",
-    Status: "Approved",
-    ImageJob: "https://cdn-icons-png.flaticon.com/512/5968/5968705.png",
-    CreatedAt: "2024-06-01",
-    UpdatedAt: "2024-06-01"
-  },
-  {
-    Id: 3,
-    Title: "Senior Product Designer",
-    Description: "Design and improve product UI/UX.",
-    CompanyId: 3,
-    CompanyName: "Upwork",
-    Salary: "$35k - $45k",
-    IndustryId: 1,
-    Industry: "Design",
-    ExpiryDate: "2024-07-30",
-    LevelId: 3,
-    JobTypeId: 3,
-    ExperienceId: 3,
-    TimeStart: "2024-06-01",
-    TimeEnd: "2024-07-01",
-    Status: "Rejected",
-    ImageJob: "https://cdn-icons-png.flaticon.com/512/5968/5968705.png",
-    CreatedAt: "2024-06-01",
-    UpdatedAt: "2024-06-01"
-  }
-];
+import ApiService from "../../../../services/api.service";
+import API_CONFIG from '../../../../config/api.config';
 
 const JobPostManagement = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editJob, setEditJob] = useState(null);
+  const [editError, setEditError] = useState("");
   const [alertMsg, setAlertMsg] = useState("");
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const jobsPerPage = 10;
-  const [filterCompany, setFilterCompany] = useState('all');
-  const [filterIndustry, setFilterIndustry] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedJob, setSelectedJob] = useState(null);
+  const [filterIndustry, setFilterIndustry] = useState('all');
+  const [filterCompany, setFilterCompany] = useState('all');
 
   useEffect(() => {
     fetchJobs();
   }, []);
 
-  const fetchJobs = () => {
-    setLoading(true);
-    fetch(API_URL)
-      .then((res) => res.json())
-      .then((data) => {
-        setJobs(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setJobs(fakeJobs);
-        setLoading(false);
-      });
+  const fetchJobs = async () => {
+    try {
+      setLoading(true);
+      const jobsData = await ApiService.get('/' + API_CONFIG.ENDPOINTS.JOB.BASE);
+      setJobs(jobsData);
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+      setJobs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleShowDetail = (job) => {
+    setSelectedJob(job);
+    setShowDetailModal(true);
+  };
+
+  const handleShowEdit = (job) => {
+    setEditJob({ ...job });
+    setEditError("");
+    setShowEditModal(true);
+  };
+
+  const handleApproveJob = async (jobId) => {
+    try {
+      await ApiService.request(`job-posts/${jobId}/approve`, 'PATCH');
+      setAlertMsg("Job post approved!");
+      fetchJobs();
+    } catch (error) {
+      console.error('Error approving job:', error);
+      setAlertMsg("Failed to approve job post.");
+    }
+  };
+
+  const handleRejectJob = async (jobId) => {
+    try {
+      await ApiService.request(`job-posts/${jobId}/reject`, 'PATCH');
+      setAlertMsg("Job post rejected!");
+      fetchJobs();
+    } catch (error) {
+      console.error('Error rejecting job:', error);
+      setAlertMsg("Failed to reject job post.");
+    }
   };
 
   // Lấy danh sách công ty và ngành nghề duy nhất
@@ -129,18 +100,6 @@ const JobPostManagement = () => {
   useEffect(() => { setCurrentPage(1); }, [search, filterCompany, filterIndustry, filterStatus]);
 
   // Action handlers
-  const handleShowDetail = (job) => {
-    setSelectedJob(job);
-    setShowDetailModal(true);
-  };
-  const handleApprove = (jobId) => {
-    setAlertMsg("Job post approved!");
-    // Gọi API thực tế ở đây
-  };
-  const handleReject = (jobId) => {
-    setAlertMsg("Job post rejected!");
-    // Gọi API thực tế ở đây
-  };
   const handleRemove = (jobId) => {
     setAlertMsg("Job post removed!");
     // Gọi API thực tế ở đây
@@ -288,10 +247,10 @@ const JobPostManagement = () => {
                             <div className="job-actions">
                               <button className="btn btn-sm me-1" onClick={() => handleShowDetail(job)}>View</button>
                               {job.Status === "Pending" && (
-                                <button className="btn btn-sm me-1" onClick={() => handleApprove(job.Id)}>Approve</button>
+                                <button className="btn btn-sm me-1" onClick={() => handleApproveJob(job.Id)}>Approve</button>
                               )}
                               {job.Status === "Pending" && (
-                                <button className="btn btn-sm me-1" onClick={() => handleReject(job.Id)}>Reject</button>
+                                <button className="btn btn-sm me-1" onClick={() => handleRejectJob(job.Id)}>Reject</button>
                               )}
                               <button className="btn btn-sm" onClick={() => handleRemove(job.Id)}>Remove</button>
                             </div>

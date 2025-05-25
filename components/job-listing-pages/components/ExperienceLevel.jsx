@@ -2,7 +2,7 @@
 import { useDispatch, useSelector } from "react-redux";
 import { addExperience } from "../../../features/filter/filterSlice";
 
-const ExperienceLevel = ({ experienceLevels }) => {
+const ExperienceLevel = ({ experienceLevels, onSelectExperienceLevel }) => {
     const dispatch = useDispatch();
 
     // Lấy experience đang được chọn từ filter slice
@@ -12,6 +12,10 @@ const ExperienceLevel = ({ experienceLevels }) => {
     // experience handler
     const experienceHandler = (e, value) => {
         dispatch(addExperience(value));
+        // Call the handler passed from parent with item.id and checked status
+        if (onSelectExperienceLevel) {
+            onSelectExperienceLevel(value);
+        }
     };
 
     return (
@@ -21,20 +25,16 @@ const ExperienceLevel = ({ experienceLevels }) => {
                     <label className="switch">
                         <input
                             type="checkbox"
-                            checked={selectedExperienceLevels.includes(item.name.toLocaleLowerCase().split(" ").join("-"))}
-                            value={item.name}
-                            onChange={(e) => experienceHandler(e, item.name.toLocaleLowerCase().split(" ").join("-"))}
+                            checked={selectedExperienceLevels.includes(item.id)}
+                            value={item.id}
+                            onChange={(e) => experienceHandler(e, item.id)}
                         />
                         <span className="slider round"></span>
                         <span className="title">{item.name}</span>
                     </label>
                 </li>
             ))}
-            <li>
-                <button className="view-more">
-                    <span className="icon flaticon-plus"></span> View More
-                </button>
-            </li>
+           
         </ul>
     );
 };

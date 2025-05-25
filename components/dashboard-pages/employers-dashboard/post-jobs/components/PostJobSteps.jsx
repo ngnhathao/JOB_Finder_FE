@@ -8,7 +8,7 @@ const PostJobSteps = () => {
 
       <div className="step">
         <span className="icon flaticon-money"></span>
-        <h5>Package & Payments</h5>
+        <h5>Payment</h5>
       </div>
 
       <div className="step">

@@ -20,6 +20,8 @@ const FilterSidebar = () => {
   const [industries, setIndustries] = useState([]);
   const [loadingLookupData, setLoadingLookupData] = useState(true);
   const [lookupDataError, setLookupDataError] = useState(null);
+  // Add state for provinces
+  const [provinces, setProvinces] = useState([]);
 
   // Add state for filter selections
   const [selectedJobTypes, setSelectedJobTypes] = useState([]);
@@ -60,15 +62,17 @@ const FilterSidebar = () => {
   useEffect(() => {
     const fetchLookupData = async () => {
       try {
-        const [jobTypesRes, expLevelsRes, industriesRes] = await Promise.all([
+        const [jobTypesRes, expLevelsRes, industriesRes, provincesRes] = await Promise.all([
           jobService.getJobTypes(),
           jobService.getExperienceLevels(),
           jobService.getIndustries(),
+          jobService.getProvinces(), // Fetch provinces
         ]);
         setJobTypesData(jobTypesRes);
         setExperienceLevels(expLevelsRes);
         setIndustries(industriesRes);
-        console.log('Lookup data fetched in FilterSidebar', { jobTypesRes, expLevelsRes, industriesRes });
+        setProvinces(provincesRes); // Set provinces state
+        console.log('Lookup data fetched in FilterSidebar', { jobTypesRes, expLevelsRes, industriesRes, provincesRes });
       } catch (err) {
         setLookupDataError('Failed to fetch lookup data in sidebar');
         console.error('Failed to fetch lookup data in FilterSidebar', err);
@@ -110,11 +114,8 @@ const FilterSidebar = () => {
         <div className="filter-block">
           <h4>Location</h4>
           <div className="form-group">
-            <LocationBox />
+            <LocationBox provinces={provinces} />
           </div>
-
-          <p>Radius around selected destination</p>
-          <DestinationRangeSlider />
         </div>
         {/* <!-- Filter Block --> */}
 
@@ -152,8 +153,7 @@ const FilterSidebar = () => {
         {/* <!-- Filter Block --> */}
 
         <div className="filter-block">
-          <h4>Tags</h4>
-          <Tag />
+          
         </div>
         {/* <!-- Filter Block --> */}
       </div>

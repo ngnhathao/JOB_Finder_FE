@@ -7,67 +7,40 @@ import DefaulHeader2 from "../../header/DefaulHeader2";
 import MobileMenu from "../../header/MobileMenu";
 import FilterTopBox from "./FilterTopBox";
 import FilterSidebar from "./FilterSidebar";
-import { useEffect, useState } from "react";
-import { authService } from "@/services/authService";
+import { useState, useEffect } from "react";
 
-
-
-const index = () => {
+const EmployersListV1 = () => {
   const [companies, setCompanies] = useState([]);
+  const [industries, setIndustries] = useState([]);
+  const [teamSizes, setTeamSizes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchCompanies = async () => {
-      try {
-        const token = authService.getToken();
-        const headers = {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        };
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-
-        const response = await fetch("https://localhost:7266/api/CompanyProfile", {
-          method: 'GET',
-          headers: headers,
-        });
-        
-
-        if (!response.ok) {
-          const errorBody = await response.text();
-          throw new Error(`HTTP error! status: ${response.status}, body: ${errorBody}`);
-        }
-
-        const data = await response.json();
-        const mapped = data.map((item) => ({
-          Id: item.userId,
-          CompanyName: item.companyName,
-          CompanyProfileDescription: item.companyProfileDescription,
-          Location: item.location,
-          UrlCompanyLogo: item.urlCompanyLogo,
-          ImageLogoLgr: item.imageLogoLgr,
-          TeamSize: item.teamSize,
-          IsVerified: item.isVerified,
-          Website: item.website,
-          Contact: item.contact,
-          Industry: item.industry || '',
-          IsLocked: false
-        }));
-
-        setCompanies(mapped);
+    setLoading(true);
+    setError(null);
+    // Fetch industries
+    fetch("/api/Industry").then(res => res.json()).then(setIndustries);
+    // Fetch all companies to get all team sizes
+    fetch("/api/CompanyProfile")
+      .then(res => res.json())
+      .then(data => {
+        setCompanies(data);
+        setTeamSizes(Array.from(new Set(data.map(c => c.teamSize).filter(Boolean))));
         setLoading(false);
-      } catch (err) {
-        console.error("Error fetching companies:", err);
-        setError(err);
-        // setCompanies(fakeEmployers); // Bỏ dòng này
+      })
+      .catch(err => {
+        setError(err.message);
         setLoading(false);
-      }
-    };
+      });
+  }, []);
 
-    fetchCompanies();
-  }, []); // Dependencies rỗng, chỉ chạy 1 lần khi mount
+  // Khi filter thay đổi, cập nhật companies
+  const handleFilterChange = (filtered) => {
+    setLoading(true);
+    setCompanies(filtered);
+    setLoading(false);
+  };
 
   return (
     <>
@@ -89,36 +62,17 @@ const index = () => {
       <section className="ls-section">
         <div className="auto-container">
           <div className="row">
-            <div
-              className="offcanvas offcanvas-start"
-              tabIndex="-1"
-              id="filter-sidebar"
-              aria-labelledby="offcanvasLabel"
-            >
-              <div className="filters-column hide-left">
-                <FilterSidebar />
-              </div>
+            <div className="filters-column col-lg-4 col-md-12 col-sm-12">
+              <FilterSidebar onFilterChange={handleFilterChange} industries={industries} teamSizes={teamSizes} />
             </div>
-            {/* End filter column for tablet and mobile devices */}
-
-            <div className="filters-column hidden-1023 col-lg-4 col-md-12 col-sm-12">
-              <FilterSidebar />
-            </div>
-            {/* <!-- End Filters Column for destop and laptop --> */}
-
             <div className="content-column col-lg-8 col-md-12 col-sm-12">
               <div className="ls-outer">
                 <FilterTopBox companies={companies} loading={loading} error={error} />
-
-                {/* Old rendering logic removed */}
-
+                {/* <!-- ls Switcher --> */}
               </div>
             </div>
-            {/* <!-- End Content Column --> */}
           </div>
-          {/* End row */}
         </div>
-        {/* End container */}
       </section>
       {/* <!--End Listing Page Section --> */}
 
@@ -128,4 +82,4 @@ const index = () => {
   );
 };
 
-export default index;
+export default EmployersListV1;

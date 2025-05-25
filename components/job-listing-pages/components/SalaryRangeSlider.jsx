@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useEffect, useState } from "react";
@@ -6,7 +5,7 @@ import InputRange from "react-input-range";
 import { useDispatch, useSelector } from "react-redux";
 import { addSalary } from "../../../features/filter/filterSlice";
 
-const SalaryRangeSlider = () => {
+const SalaryRangeSlider = ({ onChange }) => {
     const { jobList } = useSelector((state) => state.filter);
     const [salary, setSalary] = useState({
         min: jobList.salary.min,
@@ -17,6 +16,9 @@ const SalaryRangeSlider = () => {
 
     const handleOnChange = ({ min, max }) => {
         dispatch(addSalary({ min, max }));
+        if (onChange) {
+            onChange({ min, max });
+        }
     };
 
     useEffect(() => {

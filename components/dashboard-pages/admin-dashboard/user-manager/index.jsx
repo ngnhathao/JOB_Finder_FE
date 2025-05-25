@@ -190,8 +190,6 @@ const UserManager = () => {
       formData.append('roleId', formUser.roleId);
       if (selectedImageFile) {
         formData.append('imageFile', selectedImageFile);
-      } else if (formUser.image) {
-        formData.append('image', formUser.image);
       }
 
       ApiService.updateUser(editUser.id, formData)

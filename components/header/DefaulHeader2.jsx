@@ -139,7 +139,7 @@ const DefaulHeader2 = () => {
         <div className="outer-box">
           {isLoggedIn ? (
             <div className="logged-in-info">
-              {role === 'Employer' && (
+              {role === 'Company' && (
                 <div className="dropdown dashboard-option">
                   <a className="dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <Image

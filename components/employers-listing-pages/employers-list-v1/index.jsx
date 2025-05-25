@@ -1,5 +1,3 @@
-"use client";
-
 import FooterDefault from "../../../components/footer/common-footer";
 import Breadcrumb from "../../common/Breadcrumb";
 import LoginPopup from "../../common/form/login/LoginPopup";
@@ -7,41 +5,8 @@ import DefaulHeader2 from "../../header/DefaulHeader2";
 import MobileMenu from "../../header/MobileMenu";
 import FilterTopBox from "./FilterTopBox";
 import FilterSidebar from "./FilterSidebar";
-import { useState, useEffect } from "react";
 
-const EmployersListV1 = () => {
-  const [companies, setCompanies] = useState([]);
-  const [industries, setIndustries] = useState([]);
-  const [teamSizes, setTeamSizes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
-    // Fetch industries
-    fetch("/api/Industry").then(res => res.json()).then(setIndustries);
-    // Fetch all companies to get all team sizes
-    fetch("/api/CompanyProfile")
-      .then(res => res.json())
-      .then(data => {
-        setCompanies(data);
-        setTeamSizes(Array.from(new Set(data.map(c => c.teamSize).filter(Boolean))));
-        setLoading(false);
-      })
-      .catch(err => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, []);
-
-  // Khi filter thay đổi, cập nhật companies
-  const handleFilterChange = (filtered) => {
-    setLoading(true);
-    setCompanies(filtered);
-    setLoading(false);
-  };
-
+const index = () => {
   return (
     <>
       {/* <!-- Header Span --> */}
@@ -62,17 +27,34 @@ const EmployersListV1 = () => {
       <section className="ls-section">
         <div className="auto-container">
           <div className="row">
-            <div className="filters-column col-lg-4 col-md-12 col-sm-12">
-              <FilterSidebar onFilterChange={handleFilterChange} industries={industries} teamSizes={teamSizes} />
+            <div
+              className="offcanvas offcanvas-start"
+              tabIndex="-1"
+              id="filter-sidebar"
+              aria-labelledby="offcanvasLabel"
+            >
+              <div className="filters-column hide-left">
+                <FilterSidebar />
+              </div>
             </div>
+            {/* End filter column for tablet and mobile devices */}
+
+            <div className="filters-column hidden-1023 col-lg-4 col-md-12 col-sm-12">
+              <FilterSidebar />
+            </div>
+            {/* <!-- End Filters Column for destop and laptop --> */}
+
             <div className="content-column col-lg-8 col-md-12 col-sm-12">
               <div className="ls-outer">
-                <FilterTopBox companies={companies} loading={loading} error={error} />
+                <FilterTopBox />
                 {/* <!-- ls Switcher --> */}
               </div>
             </div>
+            {/* <!-- End Content Column --> */}
           </div>
+          {/* End row */}
         </div>
+        {/* End container */}
       </section>
       {/* <!--End Listing Page Section --> */}
 
@@ -82,4 +64,4 @@ const EmployersListV1 = () => {
   );
 };
 
-export default EmployersListV1;
+export default index;

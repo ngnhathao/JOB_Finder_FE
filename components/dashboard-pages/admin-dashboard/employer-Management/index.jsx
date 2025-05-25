@@ -23,6 +23,8 @@ const EmployerManagement = () => {
   const [filterTeamSize, setFilterTeamSize] = useState('all');
   const [filterIndustry, setFilterIndustry] = useState('all');
   const [industries, setIndustries] = useState([]);
+  const [selectedCompanyImageFile, setSelectedCompanyImageFile] = useState(null);
+  const [selectedCompanyLgrImageFile, setSelectedCompanyLgrImageFile] = useState(null);
 
   useEffect(() => {
     fetchEmployers();
@@ -100,49 +102,77 @@ const EmployerManagement = () => {
     setEditEmployer({ ...employer });
     setEditError("");
     setShowEditModal(true);
+    setSelectedCompanyImageFile(null);
+    setSelectedCompanyLgrImageFile(null);
   };
 
   const handleEditChange = (e) => {
-    const { name, value } = e.target;
-    setEditEmployer({ ...editEmployer, [name]: value });
+    const { name, value, files } = e.target;
+    const file = files && files[0];
+
+    if (name === "logoFile" && file) {
+      setSelectedCompanyImageFile(file);
+      setEditEmployer({
+        ...editEmployer,
+        UrlCompanyLogo: URL.createObjectURL(file)
+      });
+    } else if (name === "logoLgrFile" && file) {
+      setSelectedCompanyLgrImageFile(file);
+      setEditEmployer({
+        ...editEmployer,
+        ImageLogoLgr: URL.createObjectURL(file)
+      });
+    } else if (name !== "logo background" && name !== "logoLgrFile") {
+      setEditEmployer({ ...editEmployer, [name]: value });
+    }
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     // Validate
     if (!editEmployer.CompanyName || !editEmployer.Contact) {
       setEditError("Company name và Contact là bắt buộc.");
       return;
     }
-    // Chuẩn bị dữ liệu gửi API
-    const body = {
-      userId: editEmployer.Id,
-      companyName: editEmployer.CompanyName,
-      companyProfileDescription: editEmployer.companyProfileDescription,
-      location: editEmployer.Location,
-      urlCompanyLogo: editEmployer.UrlCompanyLogo,
-      imageLogoLgr: editEmployer.ImageLogoLgr,
-      teamSize: editEmployer.TeamSize,
-      isVerified: editEmployer.IsVerified,
-      website: editEmployer.Website,
-      contact: editEmployer.Contact,
-      industryId: editEmployer.IndustryId
-    };
-    fetch(`${API_URL}/${editEmployer.Id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    })
-      .then(res => {
-        if (res.ok) {
-          setAlertMsg("Cập nhật công ty thành công!");
-          setShowEditModal(false);
-          fetchEmployers();
-        } else {
-          setEditError("Cập nhật thất bại.");
-        }
-      })
-      .catch(() => setEditError("Cập nhật thất bại."));
+
+    const formData = new FormData();
+    formData.append('UserId', editEmployer.Id); // API expects UserId (PascalCase)
+    formData.append('CompanyName', editEmployer.CompanyName); // Ensure PascalCase
+    formData.append('CompanyProfileDescription', editEmployer.companyProfileDescription || ''); // Ensure PascalCase
+    formData.append('Location', editEmployer.Location || ''); // Ensure PascalCase
+    formData.append('TeamSize', editEmployer.TeamSize || ''); // Ensure PascalCase
+    formData.append('Website', editEmployer.Website || ''); // Ensure PascalCase
+    formData.append('Contact', editEmployer.Contact); // Ensure PascalCase
+    formData.append('IndustryId', editEmployer.IndustryId || ''); // API expects IndustryId (PascalCase)
+
+    // Append image files if selected
+    if (selectedCompanyImageFile) {
+      formData.append('logoFile', selectedCompanyImageFile); // Append as logoFile
+    }
+    if (selectedCompanyLgrImageFile) {
+       formData.append('logoLgrFile', selectedCompanyLgrImageFile); // Append as logoLgrFile
+    }
+
+    try {
+      // Use ApiService.request with PUT method and FormData to /api/CompanyProfile/{userId}
+      // The API expects userId in the path, and UserId in the form data.
+      const res = await ApiService.request(`CompanyProfile/${editEmployer.Id}`, 'PUT', formData, {
+          'Content-Type': undefined // Let browser set Content-Type with boundary for FormData
+      });
+
+      if (res.ok) { // Check if the response was successful
+        setAlertMsg("Cập nhật công ty thành công!");
+        setShowEditModal(false);
+        fetchEmployers(); // Refresh the list
+      } else {
+        // Attempt to read error message from response body
+        const errorData = await res.json();
+        setEditError(errorData.message || `Cập nhật thất bại: ${res.status}`);
+      }
+    } catch (error) {
+      console.error("Error updating company:", error);
+      setEditError(error.message || "Cập nhật thất bại.");
+    }
   };
 
   // Lấy danh sách industry duy nhất từ employers
@@ -431,8 +461,38 @@ const EmployerManagement = () => {
                     <input className="form-control" name="Contact" value={editEmployer.Contact} onChange={handleEditChange} required />
                   </div>
                   <div className="mb-2">
-                    <label>Logo URL</label>
-                    <input className="form-control" name="UrlCompanyLogo" value={editEmployer.UrlCompanyLogo} onChange={handleEditChange} />
+                    <label>Company Logo (Normal)</label>
+                    <input
+                      className="form-control"
+                      type="file"
+                      name="logoFile"
+                      onChange={handleEditChange}
+                      accept="image/*"
+                    />
+                    {(selectedCompanyImageFile || editEmployer?.UrlCompanyLogo) && (
+                      <img
+                        src={selectedCompanyImageFile ? URL.createObjectURL(selectedCompanyImageFile) : editEmployer?.UrlCompanyLogo}
+                        alt="Company Logo Preview (Normal)"
+                        style={{ width: '100px', height: '100px', objectFit: 'contain', marginTop: '10px', borderRadius: '12px', background:'#eee' }}
+                      />
+                    )}
+                  </div>
+                  <div className="mb-2">
+                    <label>Company Logo (Large)</label>
+                    <input
+                      className="form-control"
+                      type="file"
+                      name="logoLgrFile"
+                      onChange={handleEditChange}
+                      accept="image/*"
+                    />
+                    {(selectedCompanyLgrImageFile || editEmployer?.ImageLogoLgr) && (
+                      <img
+                        src={selectedCompanyLgrImageFile ? URL.createObjectURL(selectedCompanyLgrImageFile) : editEmployer?.ImageLogoLgr}
+                        alt="Company Logo Preview (Large)"
+                        style={{ width: '100px', height: '100px', objectFit: 'contain', marginTop: '10px', borderRadius: '12px', background:'#eee' }}
+                      />
+                    )}
                   </div>
                 </div>
                 <div className="modal-footer">

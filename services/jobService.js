@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "https://randomuser.me/api";
+const API_URL = "https://localhost:7266/api";
 
 // Cấu hình axios
 axios.defaults.headers.common['Content-Type'] = 'application/json';
@@ -28,147 +28,224 @@ const CATEGORIES = [
 export const jobService = {
   getJobs: async (filters = {}) => {
     try {
-      // Gọi API để lấy 20 user ngẫu nhiên
-      const response = await axios.get(`${API_URL}/?results=20`);
-      const users = response.data.results;
+      // Hoàn tác: Gọi lại endpoint /api/Job và loại bỏ truyền filters tùy chỉnh
+      console.log('Calling backend API at endpoint /api/Job'); // Log endpoint gọi đi
+      const response = await axios.get(`${API_URL}/Job`); // Gọi endpoint /api/Job
 
-      // Transform user data thành job data
-      const jobs = users.map((user, index) => ({
-        id: index + 1,
-        jobTitle: `${user.name.first} ${user.name.last} Developer`,
-        company: `${user.name.first}'s Company`,
-        location: `${user.location.city}, ${user.location.country}`,
-        time: new Date(user.registered.date).toLocaleDateString(),
-        salary: `$${Math.floor(Math.random() * 50 + 50)}k - $${Math.floor(Math.random() * 100 + 100)}k`,
-        logo: user.picture.medium,
-        jobType: [JOB_TYPES[Math.floor(Math.random() * JOB_TYPES.length)]],
-        created_at: new Date(user.registered.date).toLocaleDateString(),
-        experience: `${Math.floor(Math.random() * 5 + 1)} years`,
-        totalSalary: {
-          min: Math.floor(Math.random() * 50 + 50),
-          max: Math.floor(Math.random() * 100 + 100)
-        },
-        tag: CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)],
-        destination: {
-          min: Math.floor(Math.random() * 50),
-          max: Math.floor(Math.random() * 50 + 50)
-        },
-        category: CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)]
+      const apiJobs = response.data; // Phản hồi có vẻ là mảng trực tiếp
+
+      console.log('Raw API response data for getJobs:', apiJobs); // Thêm log dữ liệu thô nhận được
+
+      // Ánh xạ dữ liệu từ API sang cấu trúc frontend mong đợi
+      const jobs = apiJobs.map(job => ({
+        id: job.jobId, // Sử dụng jobId từ API
+        jobTitle: job.title,
+        description: job.description,
+        // company: job.companyId, // Frontend có thể cần fetch tên công ty riêng nếu cần
+        location: `${job.addressDetail || ''}${job.addressDetail && job.provinceName ? ', ' : ''}${job.provinceName || ''}`.trim(), // Xử lý trường hợp thiếu addressDetail hoặc provinceName
+        provinceName: job.provinceName, // Add provinceName field
+        // time: job.createdAt, // Có thể dùng createdAt để hiển thị thời gian đăng
+        salary: `${job.salary} USD`, // Giữ định dạng chuỗi nếu frontend hiển thị như vậy
+        totalSalary: { min: job.salary, max: job.salary }, // Lấy giá trị số từ API
+        logo: job.imageJob || '/images/company-logo/default-logo.png',
+
+        // Các trường ID và dữ liệu khác từ API
+        companyId: job.companyId,
+        industryId: job.industryId,
+        jobTypeId: job.jobTypeId,
+        levelId: job.levelId,
+        experienceLevelId: job.experienceLevelId,
+        status: job.status,
+        expiryDate: job.expiryDate,
+        timeStart: job.timeStart,
+        timeEnd: job.timeEnd,
+        createdAt: job.createdAt, // Đổi tên để khớp với API
+        updatedAt: job.updatedAt,
+
+        // Các trường có thể cần ánh xạ thêm từ ID sang tên nếu frontend cần hiển thị tên
+        // jobType: mapJobTypeIdToName(job.jobTypeId), // Cần hàm ánh xạ nếu JobType component cần tên
+        // experience: mapExpLevelIdToName(job.experienceLevelId), // Cần hàm ánh xạ
+        // industry: mapIndustryIdToName(job.industryId), // Cần hàm ánh xạ
       }));
 
-      // Áp dụng filters
+      // Khôi phục logic lọc và phân trang frontend
       let filteredJobs = [...jobs];
 
+      // Áp dụng filters (frontend)
       if (filters.keyword) {
-        filteredJobs = filteredJobs.filter(job => 
-          job.jobTitle.toLowerCase().includes(filters.keyword.toLowerCase())
+        filteredJobs = filteredJobs.filter(job =>
+          job.jobTitle?.toLowerCase().includes(filters.keyword.toLowerCase()) ||
+          job.description?.toLowerCase().includes(filters.keyword.toLowerCase())
         );
       }
 
       if (filters.location) {
-        filteredJobs = filteredJobs.filter(job => 
-          job.location.toLowerCase().includes(filters.location.toLowerCase())
+         // Lọc theo location string bao gồm addressDetail và provinceName
+        filteredJobs = filteredJobs.filter(job =>
+          job.location?.toLowerCase().includes(filters.location.toLowerCase())
         );
       }
 
-      if (filters.category) {
-        filteredJobs = filteredJobs.filter(job => 
-          job.category.toLowerCase() === filters.category.toLowerCase()
-        );
-      }
+       if (filters.jobType?.length) {
+         // Lọc theo JobTypeId - cần ánh xạ từ ID sang tên nếu API không trả về tên
+         // hoặc kiểm tra JobTypeId trực tiếp nếu JobType component gửi ID
+         // Hiện tại jobType state trong FilterSidebar đang lưu ID
+         filteredJobs = filteredJobs.filter(job =>
+           filters.jobType.includes(job.jobTypeId)
+         );
+       }
 
-      if (filters.jobType?.length) {
-        filteredJobs = filteredJobs.filter(job => 
-          filters.jobType.includes(job.jobType[0].type.toLowerCase().split(" ").join("-"))
-        );
-      }
+       if (filters.salary?.min !== undefined) { // Kiểm tra rõ ràng undefined
+         filteredJobs = filteredJobs.filter(job =>
+           job.totalSalary?.min >= filters.salary.min
+         );
+       }
 
-      if (filters.salary?.min) {
-        filteredJobs = filteredJobs.filter(job => 
-          job.totalSalary.min >= filters.salary.min
-        );
-      }
+       if (filters.salary?.max !== undefined) { // Kiểm tra rõ ràng undefined
+         filteredJobs = filteredJobs.filter(job =>
+           job.totalSalary?.max <= filters.salary.max
+         );
+       }
 
-      if (filters.salary?.max) {
-        filteredJobs = filteredJobs.filter(job => 
-          job.totalSalary.max <= filters.salary.max
-        );
-      }
+      // Các bộ lọc frontend khác cần được thêm lại tại đây nếu cần (category, datePosted, experience, tag, sort)
 
-      // Áp dụng pagination
+      // Áp dụng pagination (frontend)
+      const total = filteredJobs.length; // Tổng số kết quả sau khi lọc frontend
       const start = filters.page ? (filters.page - 1) * (filters.limit || 10) : 0;
       const end = filters.limit ? start + filters.limit : filteredJobs.length;
       const paginatedJobs = filteredJobs.slice(start, end);
 
       return {
-        data: paginatedJobs,
-        total: filteredJobs.length
+        data: paginatedJobs, // Trả về dữ liệu đã được frontend lọc và phân trang
+        total: total // Trả về tổng số kết quả sau lọc frontend
       };
     } catch (error) {
-      console.error("Error fetching jobs:", error);
-      throw error;
+      console.error("Error fetching jobs from backend API:", error);
+      // Trả về mảng rỗng và tổng 0 khi có lỗi
+      return { data: [], total: 0 };
     }
   },
 
   getJobById: async (id) => {
     try {
-      // Gọi API để lấy 1 user ngẫu nhiên
-      const response = await axios.get(`${API_URL}/?results=1`);
-      const user = response.data.results[0];
+      // Gọi API backend để lấy job theo ID
+      const response = await axios.get(`${API_URL}/Job/${id}`);
+      const job = response.data;
 
-      return {
-        id: Number(id),
-        jobTitle: `${user.name.first} ${user.name.last} Developer`,
-        company: `${user.name.first}'s Company`,
-        location: `${user.location.city}, ${user.location.country}`,
-        time: new Date(user.registered.date).toLocaleDateString(),
-        salary: `$${Math.floor(Math.random() * 50 + 50)}k - $${Math.floor(Math.random() * 100 + 100)}k`,
-        logo: user.picture.medium,
-        jobType: [JOB_TYPES[Math.floor(Math.random() * JOB_TYPES.length)]],
-        created_at: new Date(user.registered.date).toLocaleDateString(),
-        experience: `${Math.floor(Math.random() * 5 + 1)} years`,
-        totalSalary: {
-          min: Math.floor(Math.random() * 50 + 50),
-          max: Math.floor(Math.random() * 100 + 100)
-        },
-        tag: CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)],
-        destination: {
-          min: Math.floor(Math.random() * 50),
-          max: Math.floor(Math.random() * 50 + 50)
-        },
-        category: CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)]
+      console.log(`Raw API response data for getJobById (ID ${id}):`, job); // Thêm log dữ liệu thô
+
+      // Ánh xạ dữ liệu từ API sang cấu trúc frontend
+      const mappedJob = {
+        id: job.jobId, // Sử dụng jobId từ API
+        jobTitle: job.title,
+        description: job.description,
+        // company: job.companyId, // Có thể cần fetch tên công ty
+        location: `${job.addressDetail || ''}${job.addressDetail && job.provinceName ? ', ' : ''}${job.provinceName || ''}`.trim(),
+        provinceName: job.provinceName, // Add provinceName field
+        // time: job.createdAt, // Có thể dùng createdAt
+        salary: `${job.salary} USD`, // Định dạng chuỗi
+        totalSalary: { min: job.salary, max: job.salary },
+        logo: job.imageJob || '/images/company-logo/default-logo.png',
+
+        // Các trường ID và dữ liệu khác
+        companyId: job.companyId,
+        industryId: job.industryId,
+        jobTypeId: job.jobTypeId,
+        levelId: job.levelId,
+        experienceLevelId: job.experienceLevelId,
+        status: job.status,
+        expiryDate: job.expiryDate,
+        timeStart: job.timeStart,
+        timeEnd: job.timeEnd,
+        createdAt: job.createdAt,
+        updatedAt: job.updatedAt,
+
+         // Các trường có thể cần ánh xạ
+        // jobType: mapJobTypeIdToName(job.jobTypeId),
+        // experience: mapExpLevelIdToName(job.experienceLevelId),
+        // industry: mapIndustryIdToName(job.industryId),
       };
+
+      return mappedJob;
     } catch (error) {
-      console.error("Error fetching job details:", error);
+      console.error(`Error fetching job with ID ${id} from backend API:`, error);
+      throw error; // Ném lỗi để component gọi xử lý
+    }
+  },
+
+  getJobTypes: async () => {
+    try {
+      const response = await axios.get(`${API_URL}/JobType`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching job types:", error);
+      throw error;
+    }
+  },
+
+  getExperienceLevels: async () => {
+    try {
+      const response = await axios.get(`${API_URL}/ExperienceLevels`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching experience levels:", error);
+      throw error;
+    }
+  },
+
+  getIndustries: async () => {
+    try {
+      const response = await axios.get(`${API_URL}/Industry`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching industries:", error);
       throw error;
     }
   },
 
   getJobCategories: async () => {
-    try {
-      // Trả về danh sách categories mẫu
-      return CATEGORIES.map((category, index) => ({
-        id: index + 1,
-        title: category
-      }));
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-      throw error;
-    }
+     // Nếu API backend không có endpoint riêng cho categories, bạn có thể cần
+     // tạo danh sách category dựa trên Industry hoặc JobType từ lookup data.
+     // Hiện tại giữ nguyên logic trả về danh sách mẫu nếu chưa có API.
+
+    // try {
+    //   // const response = await axios.get(`${API_URL}/Categories`); // Nếu có API
+    //   // return response.data;
+    // } catch (error) {
+    //   console.error("Error fetching categories:", error);
+    //   // throw error;
+    // }
+
+     // Trả về danh sách categories mẫu
+     const CATEGORIES = [
+       "Design",
+       "Development",
+       "Marketing",
+       "Business",
+       "Technology",
+       "Finance",
+       "Healthcare",
+       "Education"
+     ];
+     return CATEGORIES.map((category, index) => ({
+       id: index + 1,
+       title: category
+     }));
   },
 
   getCompanies: async () => {
     try {
-      // Gọi API để lấy 10 user ngẫu nhiên làm companies
-      const response = await axios.get(`${API_URL}/?results=10`);
-      return response.data.results.map((user, index) => ({
-        id: index + 1,
-        name: `${user.name.first}'s Company`,
-        logo: user.picture.medium
+      const response = await axios.get(`${API_URL}/Company`);
+      // Dữ liệu từ API Company có thể khác cấu trúc mẫu ban đầu.
+      // Ánh xạ dữ liệu từ API vào cấu trúc frontend mong đợi.
+      return response.data.map(company => ({
+        id: company.Id, // Sử dụng ID từ API nếu có trường ID
+        name: company.Name, // Sử dụng Name từ API
+        logo: company.Logo || '/images/company-logo/default-logo.png' // Sử dụng Logo từ API
       }));
     } catch (error) {
       console.error("Error fetching companies:", error);
-      throw error;
+      throw error; // Ném lỗi để component gọi xử lý
     }
   }
 };

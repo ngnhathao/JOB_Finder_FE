@@ -1,29 +1,29 @@
-
 'use client'
 import { useDispatch, useSelector } from "react-redux";
 import { addExperience } from "../../../features/filter/filterSlice";
-import { experienceLavelCheck } from "../../../features/job/jobSlice";
 
-const ExperienceLevel = () => {
-    const { experienceLavel } = useSelector((state) => state.job) || {};
+const ExperienceLevel = ({ experienceLevels }) => {
     const dispatch = useDispatch();
 
+    // Lấy experience đang được chọn từ filter slice
+    const { jobList } = useSelector((state) => state.filter) || {};
+    const selectedExperienceLevels = jobList?.experience || [];
+
     // experience handler
-    const experienceHandler = (e, id) => {
-        dispatch(addExperience(e.target.value));
-        dispatch(experienceLavelCheck(id));
+    const experienceHandler = (e, value) => {
+        dispatch(addExperience(value));
     };
 
     return (
         <ul className="switchbox">
-            {experienceLavel?.map((item) => (
+            {experienceLevels?.map((item) => (
                 <li key={item.id}>
                     <label className="switch">
                         <input
                             type="checkbox"
-                            checked={item.isChecked}
-                            value={item.value}
-                            onChange={(e) => experienceHandler(e, item.id)}
+                            checked={selectedExperienceLevels.includes(item.name.toLocaleLowerCase().split(" ").join("-"))}
+                            value={item.name}
+                            onChange={(e) => experienceHandler(e, item.name.toLocaleLowerCase().split(" ").join("-"))}
                         />
                         <span className="slider round"></span>
                         <span className="title">{item.name}</span>

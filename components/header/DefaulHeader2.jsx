@@ -19,6 +19,8 @@ const DefaulHeader2 = () => {
   const router = useRouter();
   const pathname = usePathname();
   const [navbar, setNavbar] = useState(false);
+  const [userName, setUserName] = useState('My Account');
+  const [avatar, setAvatar] = useState("/images/resource/candidate-1.png");
 
   const { isLoggedIn, user, role } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
@@ -36,6 +38,29 @@ const DefaulHeader2 = () => {
       window.addEventListener("scroll", changeBackground);
     }
 
+    if (typeof window !== 'undefined') {
+        const userString = localStorage.getItem('user');
+        console.log('User string from localStorage (DefaulHeader2):', userString);
+        if (userString) {
+            const userObj = JSON.parse(userString);
+            console.log('Parsed user object (DefaulHeader2):', userObj);
+            if (userObj.fullName) setUserName(userObj.fullName);
+            else if (userObj.name) setUserName(userObj.name);
+
+            if (userObj.avatar) {
+                console.log('Found user avatar URL (localStorage.avatar):', userObj.avatar);
+                setAvatar(userObj.avatar);
+            } else if (userObj.image) {
+                console.log('Found user image URL (localStorage.image):', userObj.image);
+                setAvatar(userObj.image);
+            } else {
+                console.log('No user avatar/image URL found in localStorage user object.');
+            }
+        } else {
+            console.log('No user data found in localStorage (DefaulHeader2).');
+        }
+    }
+
     return () => {
         if (typeof window !== 'undefined') {
             window.removeEventListener("scroll", changeBackground);
@@ -46,26 +71,21 @@ const DefaulHeader2 = () => {
   useEffect(() => {
     const token = authService.getToken();
     const userRole = authService.getRole();
-    let userName = authService.getName(); // Thử lấy từ cookie trước
-    if (typeof window !== 'undefined') {
-        const userStorage = JSON.parse(localStorage.getItem('user') || '{}');
-        if (userStorage.fullName) userName = userStorage.fullName; // Ưu tiên fullName từ localStorage
-        else if (userStorage.name) userName = userStorage.name; // Nếu không có fullName, lấy name từ localStorage
-    }
 
     if (token && userRole) {
-        if (!isLoggedIn || role !== userRole || user !== userName) {
+        if (!isLoggedIn || role !== userRole) {
             dispatch(setLoginState({ isLoggedIn: true, user: userName, role: userRole }));
         }
     } else {
         if (isLoggedIn) {
             dispatch(clearLoginState());
+            setUserName('My Account');
+            setAvatar("/images/resource/candidate-1.png");
         }
     }
-  }, [isLoggedIn, role, user, dispatch]);
+  }, [isLoggedIn, role, dispatch]);
 
   const handleLogout = () => {
-    // Xóa cookie với cả path '/' và domain 'localhost'
     if (typeof window !== "undefined") {
       const Cookies = require('js-cookie');
       Cookies.remove('token', { path: '/' });
@@ -79,7 +99,7 @@ const DefaulHeader2 = () => {
       localStorage.removeItem('name');
       console.log('LOGOUT CALLED: cookies and localStorage removed');
     }
-    authService.logout(); // vẫn gọi để đồng bộ logic
+    authService.logout();
     dispatch(clearLoginState());
     router.push('/');
   };
@@ -91,15 +111,12 @@ const DefaulHeader2 = () => {
   };
 
   return (
-    // <!-- Main Header-->
     <header
       className={`main-header  ${
         navbar ? "fixed-header animated slideInDown" : ""
       }`}
     >
-      {/* <!-- Main box --> */}
       <div className="main-box">
-        {/* <!--Nav Outer --> */}
         <div className="nav-outer">
           <div className="logo-box">
             <div className="logo">
@@ -115,15 +132,11 @@ const DefaulHeader2 = () => {
               </Link>
             </div>
           </div>
-          {/* End .logo-box */}
 
           <HeaderNavContent />
-          {/* <!-- Main Menu End--> */}
         </div>
-        {/* End .nav-outer */}
 
         <div className="outer-box">
-          {/* Render nút hoặc thông tin tùy thuộc trạng thái đăng nhập */}
           {isLoggedIn ? (
             <div className="logged-in-info">
               {role === 'Employer' && (
@@ -133,10 +146,10 @@ const DefaulHeader2 = () => {
                       alt="avatar"
                       width={50}
                       height={50}
-                      src="/images/resource/company-6.png"
+                      src={avatar}
                       className="thumb"
                     />
-                    <span className="name">{user || 'My Account'}</span>
+                    <span className="name">{userName}</span>
                   </a>
                   <ul className="dropdown-menu">
                     {employerMenuData.map((item) => (
@@ -171,10 +184,10 @@ const DefaulHeader2 = () => {
                       alt="avatar"
                       width={50}
                       height={50}
-                      src="/images/resource/candidate-1.png"
+                      src={avatar}
                       className="thumb"
                     />
-                    <span className="name">{user || 'My Account'}</span>
+                    <span className="name">{userName}</span>
                   </a>
                   <ul className="dropdown-menu">
                     {candidatesMenuData.map((item) => (
@@ -209,10 +222,10 @@ const DefaulHeader2 = () => {
                       alt="avatar"
                       width={50}
                       height={50}
-                      src="/images/resource/candidate-1.png"
+                      src={avatar}
                       className="thumb"
                     />
-                    <span className="name">{user || 'Admin Account'}</span>
+                    <span className="name">{userName}</span>
                   </a>
                   <ul className="dropdown-menu">
                     {adminMenuData.map((item) => (
@@ -243,11 +256,9 @@ const DefaulHeader2 = () => {
             </div>
           ) : (
             <>
-              {/* <!-- Add Listing --> */}
               <Link href="/candidates-dashboard/cv-manager" className="upload-cv">
                 Upload your CV
               </Link>
-              {/* <!-- Login/Register --> */}
               <div className="btn-box">
                 <a
                   href="#"

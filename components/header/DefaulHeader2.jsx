@@ -19,8 +19,10 @@ const DefaulHeader2 = () => {
   const router = useRouter();
   const pathname = usePathname();
   const [navbar, setNavbar] = useState(false);
-  const [userName, setUserName] = useState('My Account');
-  const [avatar, setAvatar] = useState("/images/resource/candidate-1.png");
+  const [userInfo, setUserInfo] = useState({
+    name: 'My Account',
+    avatar: "/images/resource/candidate-1.png"
+  });
 
   const { isLoggedIn, user, role } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
@@ -33,75 +35,77 @@ const DefaulHeader2 = () => {
     }
   };
 
+  // Chỉ chạy một lần khi component mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       window.addEventListener("scroll", changeBackground);
     }
 
-    if (typeof window !== 'undefined') {
-        const userString = localStorage.getItem('user');
-        console.log('User string from localStorage (DefaulHeader2):', userString);
-        if (userString) {
-            const userObj = JSON.parse(userString);
-            console.log('Parsed user object (DefaulHeader2):', userObj);
-            if (userObj.fullName) setUserName(userObj.fullName);
-            else if (userObj.name) setUserName(userObj.name);
+    // Kiểm tra và cập nhật trạng thái đăng nhập
+    const token = authService.getToken();
+    const userRole = authService.getRole();
+    const userString = localStorage.getItem('user');
 
-            if (userObj.avatar) {
-                console.log('Found user avatar URL (localStorage.avatar):', userObj.avatar);
-                setAvatar(userObj.avatar);
-            } else if (userObj.image) {
-                console.log('Found user image URL (localStorage.image):', userObj.image);
-                setAvatar(userObj.image);
-            } else {
-                console.log('No user avatar/image URL found in localStorage user object.');
-            }
-        } else {
-            console.log('No user data found in localStorage (DefaulHeader2).');
-        }
+    if (token && userRole && userString) {
+      try {
+        const userObj = JSON.parse(userString);
+        const userName = userObj.fullName || userObj.name || 'My Account';
+        const userAvatar = userObj.avatar || userObj.image || "/images/resource/candidate-1.png";
+
+        // Cập nhật Redux state
+        dispatch(setLoginState({ 
+          isLoggedIn: true, 
+          user: userName, 
+          role: userRole 
+        }));
+
+        // Cập nhật local state
+        setUserInfo({
+          name: userName,
+          avatar: userAvatar
+        });
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
     }
 
     return () => {
-        if (typeof window !== 'undefined') {
-            window.removeEventListener("scroll", changeBackground);
-        }
+      if (typeof window !== 'undefined') {
+        window.removeEventListener("scroll", changeBackground);
+      }
     };
-  }, []);
+  }, []); // Empty dependency array
 
+  // Chỉ cập nhật UI khi có thay đổi từ Redux state
   useEffect(() => {
-    const token = authService.getToken();
-    const userRole = authService.getRole();
-
-    if (token && userRole) {
-        if (!isLoggedIn || role !== userRole) {
-            dispatch(setLoginState({ isLoggedIn: true, user: userName, role: userRole }));
-        }
-    } else {
-        if (isLoggedIn) {
-            dispatch(clearLoginState());
-            setUserName('My Account');
-            setAvatar("/images/resource/candidate-1.png");
-        }
+    if (isLoggedIn && user) {
+      setUserInfo(prev => ({
+        ...prev,
+        name: user
+      }));  
+    } else if (!isLoggedIn) {
+      setUserInfo({
+        name: 'My Account',
+        avatar: "/images/resource/candidate-1.png"
+      });
     }
-  }, [isLoggedIn, role, dispatch]);
+  }, [isLoggedIn, user]);
 
   const handleLogout = () => {
-    if (typeof window !== "undefined") {
-      const Cookies = require('js-cookie');
-      Cookies.remove('token', { path: '/' });
-      Cookies.remove('role', { path: '/' });
-      Cookies.remove('name', { path: '/' });
-      Cookies.remove('token', { path: '/', domain: 'localhost' });
-      Cookies.remove('role', { path: '/', domain: 'localhost' });
-      Cookies.remove('name', { path: '/', domain: 'localhost' });
-      localStorage.removeItem('token');
-      localStorage.removeItem('role');
-      localStorage.removeItem('name');
-      console.log('LOGOUT CALLED: cookies and localStorage removed');
-    }
+    // Xóa tất cả dữ liệu authentication
     authService.logout();
+    localStorage.removeItem('user');
+    localStorage.removeItem('userId');
+    
+    // Cập nhật state
     dispatch(clearLoginState());
-    router.push('/');
+    setUserInfo({
+      name: 'My Account',
+      avatar: "/images/resource/candidate-1.png"
+    });
+
+    // Chuyển hướng về trang chủ
+    window.location.href = '/';
   };
 
   const handleMenuClick = (item) => {
@@ -146,10 +150,10 @@ const DefaulHeader2 = () => {
                       alt="avatar"
                       width={50}
                       height={50}
-                      src={avatar}
+                      src={userInfo.avatar}
                       className="thumb"
                     />
-                    <span className="name">{userName}</span>
+                    <span className="name">{userInfo.name}</span>
                   </a>
                   <ul className="dropdown-menu">
                     {employerMenuData.map((item) => (
@@ -184,10 +188,10 @@ const DefaulHeader2 = () => {
                       alt="avatar"
                       width={50}
                       height={50}
-                      src={avatar}
+                      src={userInfo.avatar}
                       className="thumb"
                     />
-                    <span className="name">{userName}</span>
+                    <span className="name">{userInfo.name}</span>
                   </a>
                   <ul className="dropdown-menu">
                     {candidatesMenuData.map((item) => (
@@ -222,10 +226,10 @@ const DefaulHeader2 = () => {
                       alt="avatar"
                       width={50}
                       height={50}
-                      src={avatar}
+                      src={userInfo.avatar}
                       className="thumb"
                     />
-                    <span className="name">{userName}</span>
+                    <span className="name">{userInfo.name}</span>
                   </a>
                   <ul className="dropdown-menu">
                     {adminMenuData.map((item) => (

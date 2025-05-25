@@ -4,7 +4,7 @@ import Link from "next/link";
 import ListingShowing from "../components/ListingShowing";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  addCategory,
+  addIndustry,
   addDestination,
   addFoundationDate,
   addKeyword,
@@ -20,10 +20,11 @@ const FilterTopBox = () => {
     keyword,
     location,
     destination,
-    category,
+    industry,
     foundationDate,
     sort,
     perPage,
+    companySize,
   } = useSelector((state) => state.employerFilter) || {};
   const dispatch = useDispatch();
 
@@ -60,9 +61,8 @@ const FilterTopBox = () => {
         if (keyword) params.append("CompanyName", keyword);
         if (location) params.append("Location", location);
         // Add other filters if supported by the API, based on your FilterSidebar state/components
-        // if (category) params.append("IndustryId", category); // Assuming category maps to IndustryId
-        // if (foundationDate) params.append("FoundationDate", JSON.stringify(foundationDate)); // Example
-        // if (teamSize) params.append("TeamSize", teamSize); // Assuming teamSize is still relevant for API
+        if (industry && industry !== "") params.append("IndustryId", industry); // Giả định API nhận IndustryId
+        if (companySize && companySize !== "") params.append("CompanySize", companySize); // Giả định API nhận CompanySize
 
         // Add pagination parameters (assuming API supports page and limit)
         const page = Math.floor(perPage.start / (perPage.end - perPage.start + 1)) + 1; // Calculate page number
@@ -97,7 +97,7 @@ const FilterTopBox = () => {
         if (!res.ok) throw new Error(`Failed to fetch companies: ${res.status}`);
 
         const data = await res.json();
-        console.log('Company fetch response:', data); // Log the full response data
+        console.log('API Response Data:', data); // Log the full response data
 
         // *** CORRECTLY handle API response format (assuming it's a direct array) ***
         if (Array.isArray(data)) { // If API returns a direct array
@@ -125,7 +125,7 @@ const FilterTopBox = () => {
     };
 
     fetchCompanies();
-  }, [keyword, location, destination, category, foundationDate, sort, perPage]); // Add all filter dependencies
+  }, [keyword, location, destination, industry, foundationDate, sort, perPage, companySize]); // Add all filter dependencies
 
   const industryMap = industries.reduce((acc, industry) => {
     acc[industry.industryId] = industry.industryName;
@@ -150,11 +150,27 @@ const FilterTopBox = () => {
     (item?.destination?.min >= destination?.min && // Assuming API returns destination range
     item?.destination?.max <= destination?.max);
 
-  // category filter (keeping frontend filter for now, mapping industryId)
-  const categoryFilter = (item) =>
-    category !== ""
-      ? item?.industryId == category // Compare industryId (number/string) with category filter value
+  // industry filter (keeping frontend filter for now, mapping industryId)
+  const industryFilter = (item) =>
+    industry !== ""
+      ? item?.industryId == industry // Compare industryId (number/string) with industry filter value
       : item;
+
+  // company size filter (frontend filter)
+  const companySizeFilter = (item) => {
+    if (!companySize || companySize === "") return true; // No filter applied
+    // Assuming item.teamSize is a number or string like "11-50"
+    // You might need to adjust this logic based on the exact format of company.teamSize from your API
+    if (companySize.includes('+')) {
+      const minSize = parseInt(companySize.replace('+', ''), 10);
+      return (item?.teamSize && item.teamSize >= minSize);
+    } else if (companySize.includes('-')) {
+      const [minSize, maxSize] = companySize.split('-').map(Number);
+      // Assuming item.teamSize is a number. If it's a range string, more complex parsing is needed.
+      return (item?.teamSize && item.teamSize >= minSize && item.teamSize <= maxSize);
+    }
+    return true; // Should not reach here with current options
+  };
 
   // foundation date filter (keeping frontend filter for now)
   const foundationDataFilter = (item) => {
@@ -179,18 +195,21 @@ const FilterTopBox = () => {
   console.log('Companies before frontend filters:', companies); // Log before filters
 
   const filteredByKeyword = companies?.filter(keywordFilter);
-  console.log('After keywordFilter:', filteredByKeyword);
+  console.log('After keywordFilter:', filteredByKeyword?.length, filteredByKeyword);
 
   const filteredByLocation = filteredByKeyword?.filter(locationFilter);
-  console.log('After locationFilter:', filteredByLocation);
+  console.log('After locationFilter:', filteredByLocation?.length, filteredByLocation);
 
   const filteredByDestination = filteredByLocation?.filter(destinationFilter);
-  console.log('After destinationFilter:', filteredByDestination);
+  console.log('After destinationFilter:', filteredByDestination?.length, filteredByDestination);
 
-  const filteredByCategory = filteredByDestination?.filter(categoryFilter);
-  console.log('After categoryFilter:', filteredByCategory);
+  const filteredByIndustry = filteredByDestination?.filter(industryFilter);
+  console.log('After industryFilter:', filteredByIndustry?.length, filteredByIndustry);
 
-  const filteredCompanies = filteredByCategory; // Final filtered list (after removing foundation date filter)
+  const filteredByCompanySize = filteredByIndustry?.filter(companySizeFilter);
+  console.log('After companySizeFilter:', filteredByCompanySize?.length, filteredByCompanySize);
+
+  const filteredCompanies = filteredByCompanySize; // Final filtered list
 
   // Apply frontend pagination after filtering and sorting
    const sortedAndPaginatedCompanies = filteredCompanies
@@ -216,31 +235,33 @@ const FilterTopBox = () => {
                   />
                 </span>
                 <div className="company-info-block"> {/* Keeping company-info-block div */}
-                <h4 style={{ margin: 0 }}>
-  <Link
-    href={`/employers-single-v1/${company.userId}`}
-    style={{
-      color: '#333',
-      textDecoration: 'none',
-    }}
-    onMouseEnter={(e) => (e.target.style.color = '#377dff')} // màu hover
-    onMouseLeave={(e) => (e.target.style.color = '#333')}     // màu gốc
-  >
-                      {company.companyName}
-                    </Link>
-                  </h4>
-
-                  <div className="d-flex align-items-center gap-3">
-  <div className="d-flex align-items-center me-3">
-    <span className="icon flaticon-map-locator me-2"></span>
-    <span>{company.location}</span>
-  </div>
-  <div className="d-flex align-items-center">
-    <span className="icon flaticon-briefcase me-2"></span>
-    <span>{industryMap[company.industryId] || `Industry ID: ${company.industryId}`}</span>
-  </div>
-</div>
-
+                 <h4 style={{ margin: 0 }}>
+   <Link
+     href={`/employers-single-v1/${company.userId}`}
+     style={{
+       color: '#333',
+       textDecoration: 'none',
+     }}
+     onMouseEnter={(e) => (e.target.style.color = '#377dff')} // màu hover
+     onMouseLeave={(e) => (e.target.style.color = '#333')}     // màu gốc
+   >
+                       {company.companyName}
+                     </Link>
+                   </h4>
+                   <div className="d-flex align-items-center gap-3"> {/* Location, Industry, Team Size */}
+                     <div className="d-flex align-items-center me-3">
+                       <span className="icon flaticon-map-locator me-2"></span>
+                       <span>{company.location}</span>
+                     </div>
+                     <div className="d-flex align-items-center">
+                       <span className="icon flaticon-briefcase me-2"></span>
+                       <span>{industryMap[company.industryId] || `Industry ID: ${company.industryId}`}</span>
+                     </div>
+                    <div className="d-flex align-items-center">
+                       <span className="icon flaticon-user me-2"></span> {/* Using flaticon-user as a common user/team icon */}
+                       <span>{company.teamSize || 'N/A'}</span> {/* Assuming teamSize property exists in company data */}
+                     </div>
+                   </div>
                 </div>
               </div>
 
@@ -274,8 +295,7 @@ const FilterTopBox = () => {
     dispatch(addKeyword(""));
     dispatch(addLocation(""));
     dispatch(addDestination({ min: 0, max: 100 }));
-    dispatch(addCategory(""));
-    dispatch(addFoundationDate({ min: 1900, max: 2028 }));
+    dispatch(addIndustry(""));
     dispatch(addSort(""));
     dispatch(addPerPage({ start: 0, end: 0 }));
   };
@@ -296,12 +316,13 @@ const FilterTopBox = () => {
           location !== "" ||
           destination.min !== 0 ||
           destination.max !== 100 ||
-          category !== "" ||
+          industry !== "" ||
           foundationDate.min !== 1900 ||
           foundationDate.max !== 2028 ||
           sort !== "" ||
           perPage.start !== 0 ||
-          perPage.end !== 0 ? (
+          perPage.end !== 0 ||
+          companySize !== "" ? (
             <button
               onClick={clearAll}
               className="btn btn-danger text-nowrap me-2"

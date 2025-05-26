@@ -1,29 +1,41 @@
-
 'use client'
 import { useDispatch, useSelector } from "react-redux";
-import { addCategory } from "../../../features/filter/employerFilterSlice";
+import { addIndustry } from "../../../features/filter/employerFilterSlice";
+import { useEffect, useState } from "react";
 
-const Categories = () => {
-    const { category } = useSelector((state) => state.employer) || {};
-    const { category: getCategory } = useSelector(
-        (state) => state.employerFilter
-    );
+// Nhận industries từ props và prop onSelectIndustry
+const Categories = ({ industries, onSelectIndustry }) => {
+    const { employerFilter } = useSelector((state) => state) || {};
+    const [getIndustry, setIndustry] = useState(employerFilter.industry);
+
     const dispatch = useDispatch();
 
-    const categoryHandler = (e) => {
-        dispatch(addCategory(e.target.value));
+    // category handler
+    const industryHandler = (e) => {
+         // Dispatch giá trị (industryId) của industry được chọn
+        dispatch(addIndustry(e.target.value));
+        // Call the handler passed from parent
+        if (onSelectIndustry) {
+            onSelectIndustry(e.target.value);
+        }
     };
+
+    useEffect(() => {
+        setIndustry(employerFilter.industry);
+    }, [setIndustry, employerFilter]);
+
     return (
         <>
             <select
                 className="form-select"
-                onChange={categoryHandler}
-                value={getCategory}
+                value={getIndustry} // Lấy giá trị industry đang chọn từ filter slice
+                onChange={industryHandler}
             >
-                <option value="">Choose a category</option>
-                {category?.map((item) => (
-                    <option value={item.value} key={item.id}>
-                        {item.name}
+                <option value="">Choose an Industry</option>
+                {/* Sử dụng industries từ state để render options */}
+                {industries?.map((item) => (
+                    <option key={item.id} value={item.id}> 
+                        {item.industryName}
                     </option>
                 ))}
             </select>

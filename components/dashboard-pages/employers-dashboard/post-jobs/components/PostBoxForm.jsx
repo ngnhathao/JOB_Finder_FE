@@ -53,6 +53,8 @@ const PostBoxForm = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState(null);
 
   // Lấy thông tin user từ localStorage hoặc cookies
   const [user, setUser] = useState(null);
@@ -70,6 +72,15 @@ const PostBoxForm = () => {
     const userRole = localStorage.getItem('role') || Cookies.get('role');
     setUser({ userId, role: userRole });
   }, []);
+
+  // Cleanup the image preview URL when component unmounts or image changes
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrl) {
+        URL.revokeObjectURL(imagePreviewUrl);
+      }
+    };
+  }, [imagePreviewUrl]);
 
   const [errors, setErrors] = useState({});
 
@@ -144,6 +155,16 @@ const PostBoxForm = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'imageFile') {
+      const file = e.target.files[0];
+      setSelectedImage(file);
+      if (file) {
+        setImagePreviewUrl(URL.createObjectURL(file));
+      } else {
+        setImagePreviewUrl(null);
+      }
+      return;
+    }
     setFormData(prev => ({
       ...prev,
       [name]: [
@@ -181,23 +202,27 @@ const PostBoxForm = () => {
     }
 
     try {
-      const jobData = {
-        title: formData.title,
-        description: formData.description,
-        companyId: user.userId,
-        salary: Number(formData.salary),
-        industryId: Number(formData.industryId),
-        expiryDate: formData.expiryDate,
-        levelId: Number(formData.levelId),
-        jobTypeId: Number(formData.jobTypeId),
-        experienceLevelId: Number(formData.experienceLevelId),
-        timeStart: formData.timeStart,
-        timeEnd: formData.timeEnd,
-        status: 0,
-        provinceName: formData.provinceName,
-        addressDetail: formData.addressDetail
-      };
-      const result = await ApiService.post("/Job/create", jobData);
+      const postFormData = new FormData();
+      postFormData.append('Title', formData.title);
+      postFormData.append('Description', formData.description);
+      postFormData.append('CompanyId', user.userId);
+      postFormData.append('Salary', formData.salary);
+      postFormData.append('IndustryId', formData.industryId);
+      postFormData.append('ExpiryDate', formData.expiryDate);
+      postFormData.append('LevelId', formData.levelId);
+      postFormData.append('JobTypeId', formData.jobTypeId);
+      postFormData.append('ExperienceLevelId', formData.experienceLevelId);
+      postFormData.append('TimeStart', formData.timeStart);
+      postFormData.append('TimeEnd', formData.timeEnd);
+      postFormData.append('Status', 0);
+      postFormData.append('ProvinceName', formData.provinceName);
+      postFormData.append('AddressDetail', formData.addressDetail);
+
+      if (selectedImage) {
+        postFormData.append('ImageFile', selectedImage);
+      }
+
+      const result = await ApiService.createJob(postFormData);
       console.log("API gọi thành công", result);
       setSuccess(true);
       setShowSuccessModal(true);
@@ -420,6 +445,25 @@ const PostBoxForm = () => {
           {errors.addressDetail && <span className="error-message">{errors.addressDetail}</span>}
         </div>
 
+        {/* Image File Input */}
+        <div className="form-group col-lg-12 col-md-12">
+          <label>Job Image</label>
+          <input 
+            type="file" 
+            name="imageFile" 
+            accept="image/*"
+            onChange={handleInputChange}
+            className={errors.imageFile ? 'error' : ''}
+            disabled={isLoading}
+          />
+          {errors.imageFile && <span className="error-message">{errors.imageFile}</span>}
+          {imagePreviewUrl && (
+            <div className="image-preview-container" style={{ marginTop: '10px' }}>
+              <img src={imagePreviewUrl} alt="Image Preview" style={{ maxWidth: '100%', height: 'auto', border: '1px solid #ddd', borderRadius: '4px' }} />
+            </div>
+          )}
+        </div>
+
         {/* Submit Button */}
         <div className="form-group col-lg-12 col-md-12 text-right">
           <button 
@@ -456,10 +500,18 @@ const PostBoxForm = () => {
           font-size: 14px;
           background-color: #fff;
         }
+        .form-group {
+          margin-bottom: 20px;
+        }
         .form-control:focus {
           outline: none;
           border-color: #4a90e2;
           box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+        }
+        select.form-select {
+          padding: 10px;
+          height: auto;
+          background-position: right 10px center;
         }
         .error {
           border-color: #dc3545 !important;
@@ -519,6 +571,12 @@ const PostBoxForm = () => {
         }
         .modal-content button {
           margin-top: 16px;
+        }
+        label {
+          font-weight: 500;
+          color: #333;
+          margin-bottom: 8px;
+          display: block;
         }
       `}</style>
     </form>

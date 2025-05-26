@@ -54,8 +54,22 @@ class ApiServiceClass {
 
   static async createJob(jobData) {
     const url = API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.JOB.CREATE);
-    const options = API_CONFIG.getRequestOptions('POST', jobData);
-    return API_CONFIG.handleResponse(await fetch(url, options));
+    let options;
+    if (jobData instanceof FormData) {
+      options = {
+        method: 'POST',
+        body: jobData
+        // KHÔNG set Content-Type, browser sẽ tự động set boundary cho multipart/form-data
+      };
+    } else {
+      options = API_CONFIG.getRequestOptions('POST', jobData);
+    }
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || `HTTP error! status: ${response.status}`);
+    }
+    return response.json();
   }
 
   // Company APIs
@@ -118,6 +132,7 @@ const ApiService = {
   getUserById: ApiServiceClass.getUserById,
   updateUser: ApiServiceClass.updateUser,
   request: ApiServiceClass.request,
+  createJob: ApiServiceClass.createJob,
   addUser: async (formData) => {
     const url = API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.USER.BASE);
     const options = {

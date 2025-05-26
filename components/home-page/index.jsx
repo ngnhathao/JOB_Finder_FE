@@ -30,22 +30,20 @@ const index = () => {
       {/* End Hero Section */}
 
       <section className="job-categories ui-job-categories">
-        <div className="auto-container">
-          <div className="sec-title text-center">
-            <h2>Popular Job Categories</h2>
-            <div className="text">2020 jobs live - 293 added today.</div>
-          </div>
-
-          <div
-            className="row "
-            data-aos="fade-up"
-            data-aos-anchor-placement="top-bottom"
-          >
-            {/* <!-- Category Block --> */}
-            <JobCategorie1 />
-          </div>
+      <div className="auto-container">
+        <div className="sec-title text-center">
+          <h2>Popular Job Industry</h2>
         </div>
-      </section>
+
+        <div
+          className="row"
+          data-aos="fade-up"
+          data-aos-anchor-placement="top-bottom"
+        >
+          <JobCategorie1 />
+        </div>
+      </div>
+    </section>
       {/* End Job Categorie Section */}
 
       <section className="job-section">
@@ -90,27 +88,7 @@ const index = () => {
       </section>
       {/* <!-- End About Section --> */}
 
-      <section className="news-section">
-        <div className="auto-container">
-          <div className="sec-title text-center">
-            <h2>Recent News Articles</h2>
-            <div className="text">
-              Fresh job related news content posted each day.
-            </div>
-          </div>
-          {/* End ."sec-title */}
-          <div className="row" data-aos="fade-up">
-            <Blog />
-          </div>
-        </div>
-      </section>
-      {/* <!-- End News Section --> */}
-
-      <section className="app-section">
-        <div className="auto-container">
-          {/* <AppSection /> */}
-        </div>
-      </section>
+     
       {/* <!-- End App Section --> */}
 
       <CallToAction />

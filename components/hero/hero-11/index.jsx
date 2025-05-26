@@ -18,7 +18,7 @@ const index = () => {
                 data-aos="fade-up"
                 data-aos-delay="300"
               >
-                <h3>There Are 93,178 Postings Here For you!</h3>
+                <h3>Find Your Future Job with AI – AJP Stands by Your Side!</h3>
                 <div className="text">
                   Find Jobs, Employment & Career Opportunities
                 </div>

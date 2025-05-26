@@ -37,6 +37,12 @@ const DashboardCandidatesHeader = () => {
                     setFullName(userName);
                 }
             }
+            // Lấy avatar từ localStorage
+            if (user.avatar) {
+                setAvatar(user.avatar);
+            } else {
+                setAvatar("/images/resource/candidate-1.png"); // Default avatar if not found
+            }
         }
     }, []);
 
@@ -58,8 +64,8 @@ const DashboardCandidatesHeader = () => {
                                     <Image
                                         alt="Logo JobFinder"
                                         src="/images/jobfinder-logo.png"
-                                        width={154}
-                                        height={50}
+                                        width={90}
+                                        height={90}
                                         title="JobFinder"
                                     />
                                 </Link>

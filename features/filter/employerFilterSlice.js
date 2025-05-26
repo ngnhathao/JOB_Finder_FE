@@ -7,7 +7,7 @@ const initialState = {
         min: 0,
         max: 100,
     },
-    category: "",
+    industry: "",
     companySize: "",
     foundationDate: {
         min: 1900,
@@ -34,8 +34,11 @@ export const employerFilterSlice = createSlice({
             state.destination.min = payload.min;
             state.destination.max = payload.max;
         },
-        addCategory: (state, { payload }) => {
-            state.category = payload;
+        addIndustry: (state, { payload }) => {
+            state.industry = payload;
+        },
+        addCompanySize: (state, { payload }) => {
+            state.companySize = payload;
         },
         addFoundationDate: (state, { payload }) => {
             state.foundationDate.min = payload.min;
@@ -55,7 +58,8 @@ export const {
     addKeyword,
     addLocation,
     addDestination,
-    addCategory,
+    addIndustry,
+    addCompanySize,
     addFoundationDate,
     addSort,
     addPerPage,

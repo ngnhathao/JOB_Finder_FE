@@ -38,6 +38,7 @@ const FormContent = ({ isPopup = false }) => {
 
       // Lưu thông tin user vào localStorage trước
       const userInfo = {
+        
         fullName: user.fullName || '',
         avatar: user.image || '/images/resource/company-6.png',
         email: user.email || formData.email

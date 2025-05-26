@@ -181,6 +181,7 @@ const UserManager = () => {
     setShowDeleteModal(false);
   };
   const handleToggleLock = async (user) => {
+
     let action; // Declare action here
     try {
       const isLocked = user.isActive === false;
@@ -257,6 +258,11 @@ const UserManager = () => {
       formData.append('fullName', formUser.fullName);
       formData.append('email', formUser.email);
       formData.append('phone', formUser.phone);
+
+      if (selectedImageFile) {
+        formData.append('imageFile', selectedImageFile);
+      }
+
       formData.append('roleId', formUser.roleId); // Send the selected roleId
       console.log('Submitting Edit Form:', { // Log data before appending to FormData
         fullName: formUser.fullName,
@@ -267,8 +273,7 @@ const UserManager = () => {
       });
       console.log('FormData roleId value (should match above): ', formData.get('roleId'), typeof formData.get('roleId')); // Log value and type from FormData
 
-      // Removed adding skills and cvUrl
-      // ... image handling logic ...
+
 
       ApiService.updateUser(editUser.id, formData)
         .then(() => {

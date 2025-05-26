@@ -119,10 +119,11 @@ const UserManager = () => {
     setShowDeleteModal(false);
   };
   const handleToggleLock = async (user) => {
+    let action = ''; // Declare action outside the try block
     try {
       const isLocked = user.isActive === false;
-      const action = isLocked ? 'unlock' : 'lock';
-      await ApiService.request(`users/${user.id}/${action}`, 'PUT');
+      action = isLocked ? 'unlock' : 'lock'; // Assign value to action
+      await ApiService.request(`User/${user.id}/${action}`, 'PUT');
       setAlertMsg(`User ${isLocked ? 'unlocked' : 'locked'} successfully!`);
       setTimeout(fetchUsers, 300);
     } catch (error) {

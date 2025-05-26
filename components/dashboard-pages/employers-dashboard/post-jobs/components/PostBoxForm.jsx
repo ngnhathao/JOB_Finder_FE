@@ -192,12 +192,12 @@ const PostBoxForm = () => {
     setSuccess(false);
 
     if (!validateForm()) {
-      setError("Vui lòng điền đầy đủ thông tin!");
+      setError("Please fill in all information!");
       return;
     }
 
     if (!user?.userId || user.role !== 'Company') {
-      setError("Bạn phải đăng nhập bằng tài khoản công ty để đăng tin tuyển dụng.");
+      setError("You must login with a company account to post a job.");
       return;
     }
 
@@ -446,23 +446,7 @@ const PostBoxForm = () => {
         </div>
 
         {/* Image File Input */}
-        <div className="form-group col-lg-12 col-md-12">
-          <label>Job Image</label>
-          <input 
-            type="file" 
-            name="imageFile" 
-            accept="image/*"
-            onChange={handleInputChange}
-            className={errors.imageFile ? 'error' : ''}
-            disabled={isLoading}
-          />
-          {errors.imageFile && <span className="error-message">{errors.imageFile}</span>}
-          {imagePreviewUrl && (
-            <div className="image-preview-container" style={{ marginTop: '10px' }}>
-              <img src={imagePreviewUrl} alt="Image Preview" style={{ maxWidth: '100%', height: 'auto', border: '1px solid #ddd', borderRadius: '4px' }} />
-            </div>
-          )}
-        </div>
+        
 
         {/* Submit Button */}
         <div className="form-group col-lg-12 col-md-12 text-right">

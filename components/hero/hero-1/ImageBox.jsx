@@ -7,7 +7,7 @@ const ImageBox = () => {
         <Image
           width={486}
           height={589}
-          src="/images/resource/banner-img-1.png"
+          src="/images/resource/banner-hero.jpg"
           alt="hero image"
           className="w-full h-auto"
         />
@@ -18,21 +18,11 @@ const ImageBox = () => {
         <span className="icon flaticon-email-3"></span>
         <p>
           Work Inquiry From <br />
-          Ali Tufan
+          Company
         </p>
       </div>
       {/* <!-- Info BLock Two --> */}
-      <div className="info_block_two" data-aos="fade-in" data-aos-delay="2000">
-        <p>10k+ Candidates</p>
-        <div className="image">
-          <Image
-            width={206}
-            height={53}
-            src="/images/resource/multi-peoples.png"
-            alt="mulit people"
-          />
-        </div>
-      </div>
+     
       {/* <!-- Info BLock Three --> */}
       <div
         className="info_block_three"

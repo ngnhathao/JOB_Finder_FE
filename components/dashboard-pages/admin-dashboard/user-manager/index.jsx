@@ -9,16 +9,11 @@ import "./user-manager-animations.css";
 import ApiService from "../../../../services/api.service";
 import API_CONFIG from '../../../../config/api.config';
 
-const roleOptions = [
-  { id: 1, name: "Candidate" },
-  { id: 2, name: "Company" },
-  { id: 3, name: "Admin" }
-];
-
-const defaultUser = { fullName: "", email: "", phone: "", roleId: 1, password: "", status: "Active", skills: [], cvUrl: "", image: "" };
+const defaultUser = { fullName: "", email: "", phone: "", roleId: "", password: "", status: "Active", skills: [], cvUrl: "", image: "" };
 
 const UserManager = () => {
   const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -47,13 +42,62 @@ const UserManager = () => {
 
   useEffect(() => {
     fetchUsers();
+    fetchRoles();
   }, []);
+
+  const fetchRoles = async () => {
+    try {
+      const response = await ApiService.get('/' + API_CONFIG.ENDPOINTS.ROLE.GET_ALL);
+      console.log('Roles API Response:', response);
+      
+      let processedRoles = [];
+      if (Array.isArray(response)) {
+        console.log('Response is an array, processing roles...');
+        processedRoles = response
+          .filter(role => role && typeof role.roleId !== 'undefined' && role.roleId !== null)
+          .map(role => ({
+            id: parseInt(role.roleId),
+            name: role.roleName || `Role ${role.roleId}` // Fallback name
+          }));
+      } else {
+        console.error('API did not return an array for roles:', response);
+      }
+      
+      console.log('Processed Roles before setting state:', processedRoles);
+      setRoles(processedRoles);
+      console.log('Roles state after setting:', processedRoles); // Log state value
+
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+      setRoles([]);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const data = await ApiService.get('/' + API_CONFIG.ENDPOINTS.USER.BASE);
-      setUsers(data);
+      const response = await ApiService.get('/' + API_CONFIG.ENDPOINTS.USER.BASE);
+      console.log('Users API Response:', response); // Debug log: Raw user data
+
+      if (Array.isArray(response)) {
+        const usersWithRoleId = response.map(user => {
+          console.log('Processing user:', user); // Debug log: Each user object
+          return ({
+            ...user,
+            // Assuming the API returns a field like 'roleId' or 'role_id' or just 'role' holding the ID
+            // Let's log potential fields to see which one exists and holds the ID
+            originalRoleIdField: user.roleId, // Log original roleId field if exists
+            potentialRoleField: user.role, // Log potential 'role' field
+            potentialRoleIdField: user.role_id, // Log potential 'role_id' field
+            roleId: user.roleId ? parseInt(user.roleId) : "" // Keep existing parsing logic for now
+          });
+        });
+        console.log('Processed Users:', usersWithRoleId); // Debug log: Processed user data
+        setUsers(usersWithRoleId);
+      } else {
+        console.error('Invalid users data received (not an array):', response);
+        setUsers([]);
+      }
     } catch (error) {
       console.error('Error fetching users:', error);
       setUsers([]);
@@ -91,8 +135,26 @@ const UserManager = () => {
     setShowDetailModal(true);
   };
   const handleShowEdit = (user) => {
-    setEditUser({ ...user });
-    setFormUser({ ...user });
+    console.log('Opening Edit Modal for User:', user); // Log user data
+    console.log('User Role ID (before formUser): ', user.roleId, typeof user.roleId); // Log user.roleId (from user data)
+    console.log('User Role Name (from user data): ', user.role); // Log user.role name
+    console.log('Available Roles for lookup:', roles); // Log available roles
+
+    // Find the role ID from the fetched roles based on the user's role name
+    const foundRole = roles.find(role => role.name === user.role);
+    const roleIdToSet = foundRole ? foundRole.id : ""; // Use the found role's ID or empty string if not found
+
+    const userForForm = {
+      ...user,
+      // Use the found numeric roleId for the form
+      roleId: roleIdToSet
+    };
+
+    setEditUser(userForForm);
+    setFormUser(userForForm); 
+
+    console.log('Form User Role ID (after setting formUser): ', userForForm.roleId, typeof userForForm.roleId); // Log formUser.roleId after setting
+
     setEditError("");
     setShowEditModal(true);
     setFormError("");
@@ -142,7 +204,7 @@ const UserManager = () => {
     } else {
       setFormUser({
         ...formUser,
-        [name]: name === "roleId" ? Number(value) : value
+        [name]: name === "roleId" ? (value ? parseInt(value) : "") : value
       });
     }
   };
@@ -169,6 +231,12 @@ const UserManager = () => {
       formData.append('roleId', formUser.roleId);
       formData.append('password', formUser.password);
 
+      // Include Candidate-specific fields if needed by backend on add
+      if (formUser.roleId === 1) { // Assuming 1 is the ID for Candidate
+        formData.append('skills', JSON.stringify(formUser.skills || [])); // Assuming skills is an array
+        formData.append('cvUrl', formUser.cvUrl || '');
+      }
+
       if (selectedImageFile) {
         formData.append('imageFile', selectedImageFile);
       } else if (formUser.image && showEditModal) {
@@ -187,12 +255,18 @@ const UserManager = () => {
       formData.append('fullName', formUser.fullName);
       formData.append('email', formUser.email);
       formData.append('phone', formUser.phone);
-      formData.append('roleId', formUser.roleId);
-      if (selectedImageFile) {
-        formData.append('imageFile', selectedImageFile);
-      } else if (formUser.image) {
-        formData.append('image', formUser.image);
-      }
+      formData.append('roleId', formUser.roleId); // Send the selected roleId
+      console.log('Submitting Edit Form:', { // Log data before appending to FormData
+        fullName: formUser.fullName,
+        email: formUser.email,
+        phone: formUser.phone,
+        roleId: formUser.roleId,
+        roleIdType: typeof formUser.roleId // Log type of roleId
+      });
+      console.log('FormData roleId value (should match above): ', formData.get('roleId'), typeof formData.get('roleId')); // Log value and type from FormData
+
+      // Removed adding skills and cvUrl
+      // ... image handling logic ...
 
       ApiService.updateUser(editUser.id, formData)
         .then(() => {
@@ -233,15 +307,21 @@ const UserManager = () => {
                       onChange={handleSearch}
                     />
                     <select className="form-select form-select-sm me-2" style={{width:120}} value={filterRole} onChange={e=>setFilterRole(e.target.value)}>
-                      <option value="all">All Roles</option>
-                      {roleOptions.map(role => (
-                        <option key={role.id} value={role.id}>{role.name}</option>
-                      ))}
+                      <option key="all" value="all">All Roles</option>
+                      {Array.isArray(roles) && roles.length > 0 ? (
+                        roles.map(role => (
+                          <option key={`filter-role-${role.id}`} value={role.id}>
+                            {role.name || `Role ${role.id}`}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="" disabled>No roles available</option>
+                      )}
                     </select>
                     <select className="form-select form-select-sm me-2" style={{width:120}} value={filterLock} onChange={e=>setFilterLock(e.target.value)}>
-                      <option value="all">All Status</option>
-                      <option value="locked">Locked</option>
-                      <option value="unlocked">Unlocked</option>
+                      <option key="all-status" value="all">All Status</option>
+                      <option key="locked" value="locked">Locked</option>
+                      <option key="unlocked" value="unlocked">Unlocked</option>
                     </select>
                     <button className="btn btn-primary" onClick={handleShowAdd}>
                       Add User
@@ -284,7 +364,8 @@ const UserManager = () => {
                                 <td>{user.fullName}</td>
                                 <td>{user.email}</td>
                                 <td>{user.phone}</td>
-                                <td>{user.role}</td>
+                                {/* Display the actual role name from user data */}
+                                <td>{user.role || 'Unknown Role'}</td>
                                 <td>
                                   <button className="btn btn-sm me-1" onClick={() => handleShowDetail(user)} style={{display:'none'}}>View</button>
                                   <Link href={`/admin-dashboard/user-manager/${user.id}`} className="btn btn-sm me-1">View</Link>
@@ -372,10 +453,16 @@ const UserManager = () => {
                   </div>
                   <div className="mb-2">
                     <label>Role</label>
-                    <select className="form-control" name="roleId" value={formUser.roleId} onChange={handleFormChange}>
-                      {roleOptions.map(role => (
-                        <option key={role.id} value={role.id}>{role.name}</option>
-                      ))}
+                    <select className="form-control" name="roleId" value={formUser.roleId || ""} onChange={handleFormChange}>
+                      {Array.isArray(roles) && roles.length > 0 ? (
+                        roles.map(role => (
+                          <option key={`edit-role-${role.id}`} value={role.id}>
+                            {role.name || `Role ${role.id}`}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="" disabled>No roles available</option>
+                      )}
                     </select>
                   </div>
                 </div>
@@ -431,10 +518,16 @@ const UserManager = () => {
                   </div>
                   <div className="mb-2">
                     <label>Role</label>
-                    <select className="form-control" name="roleId" value={formUser.roleId} onChange={handleFormChange}>
-                      {roleOptions.map(role => (
-                        <option key={role.id} value={role.id}>{role.name}</option>
-                      ))}
+                    <select className="form-control" name="roleId" value={formUser.roleId || ""} onChange={handleFormChange}>
+                      {Array.isArray(roles) && roles.length > 0 ? (
+                        roles.map(role => (
+                          <option key={`add-role-${role.id}`} value={role.id}>
+                            {role.name || `Role ${role.id}`}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="" disabled>No roles available</option>
+                      )}
                     </select>
                   </div>
                   <div className="mb-2">

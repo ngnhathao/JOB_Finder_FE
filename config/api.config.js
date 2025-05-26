@@ -30,6 +30,14 @@ const API_CONFIG = {
       SAVE_JOB: (userId, jobId) => `users/${userId}/saved-jobs/${jobId}`,
       UNSAVE_JOB: (userId, jobId) => `users/${userId}/saved-jobs/${jobId}`,
     },
+    ROLE: {
+      BASE: 'role',
+      GET_ALL: 'role',
+      GET_BY_ID: (id) => `role/${id}`,
+      CREATE: 'role',
+      UPDATE: (id) => `role/${id}`,
+      DELETE: (id) => `role/${id}`,
+    },
     JOB: {
       BASE: 'job',
       CREATE: 'job/create',

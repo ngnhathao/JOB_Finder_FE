@@ -185,7 +185,7 @@ const UserManager = () => {
     try {
       const isLocked = user.isActive === false;
       action = isLocked ? 'unlock' : 'lock'; // Assign value here
-      await ApiService.request(`users/${user.id}/${action}`, 'PUT');
+      await ApiService.request(`user/${user.id}/${action}`, 'PUT');
       setAlertMsg(`User ${isLocked ? 'unlocked' : 'locked'} successfully!`);
       setTimeout(fetchUsers, 300);
     } catch (error) {

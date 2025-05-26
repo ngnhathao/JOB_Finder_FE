@@ -12,9 +12,6 @@ const EmployerManagement = () => {
   const [loading, setLoading] = useState(true);
   const [selectedEmployer, setSelectedEmployer] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editEmployer, setEditEmployer] = useState(null);
-  const [editError, setEditError] = useState("");
   const [alertMsg, setAlertMsg] = useState("");
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -73,7 +70,10 @@ const EmployerManagement = () => {
 
   const handleVerify = async (employerId) => {
     try {
-      await ApiService.verifyCompany(employerId);
+      await ApiService.request(
+        `CompanyProfile/${employerId}/Verify`,
+        'PUT'
+      );
       setAlertMsg("Account verified!");
       fetchEmployers();
     } catch (error) {
@@ -94,55 +94,6 @@ const EmployerManagement = () => {
       console.error('Error toggling lock:', error);
       setAlertMsg("Operation failed.");
     }
-  };
-
-  const handleShowEdit = (employer) => {
-    setEditEmployer({ ...employer });
-    setEditError("");
-    setShowEditModal(true);
-  };
-
-  const handleEditChange = (e) => {
-    const { name, value } = e.target;
-    setEditEmployer({ ...editEmployer, [name]: value });
-  };
-
-  const handleEditSubmit = (e) => {
-    e.preventDefault();
-    // Validate
-    if (!editEmployer.CompanyName || !editEmployer.Contact) {
-      setEditError("Company name và Contact là bắt buộc.");
-      return;
-    }
-    // Chuẩn bị dữ liệu gửi API
-    const body = {
-      userId: editEmployer.Id,
-      companyName: editEmployer.CompanyName,
-      companyProfileDescription: editEmployer.companyProfileDescription,
-      location: editEmployer.Location,
-      urlCompanyLogo: editEmployer.UrlCompanyLogo,
-      imageLogoLgr: editEmployer.ImageLogoLgr,
-      teamSize: editEmployer.TeamSize,
-      isVerified: editEmployer.IsVerified,
-      website: editEmployer.Website,
-      contact: editEmployer.Contact,
-      industryId: editEmployer.IndustryId
-    };
-    fetch(`${API_URL}/${editEmployer.Id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    })
-      .then(res => {
-        if (res.ok) {
-          setAlertMsg("Cập nhật công ty thành công!");
-          setShowEditModal(false);
-          fetchEmployers();
-        } else {
-          setEditError("Cập nhật thất bại.");
-        }
-      })
-      .catch(() => setEditError("Cập nhật thất bại."));
   };
 
   // Lấy danh sách industry duy nhất từ employers
@@ -331,7 +282,6 @@ const EmployerManagement = () => {
                                 <button className="btn btn-sm me-1" onClick={() => handleVerify(emp.Id)}>Approve</button>
                               )}
                               <button className="btn btn-sm" onClick={() => handleToggleLock(emp.Id, emp.IsLocked)}>{emp.IsLocked ? "Unlock" : "Lock"}</button>
-                              <button className="btn btn-sm me-1" onClick={() => handleShowEdit(emp)}>Edit</button>
                             </div>
                           </div>
                         ))
@@ -387,59 +337,6 @@ const EmployerManagement = () => {
               <div className="modal-footer">
                 <button className="btn btn-secondary" onClick={()=>setShowDetailModal(false)}>Close</button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {showEditModal && editEmployer && (
-        <div className="modal show" style={{display:'block'}}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <form onSubmit={handleEditSubmit}>
-                <div className="modal-header">
-                  <h5 className="modal-title">Edit Company</h5>
-                  <button className="btn-close" onClick={()=>setShowEditModal(false)} type="button"></button>
-                </div>
-                <div className="modal-body">
-                  {editError && <div className="alert alert-danger">{editError}</div>}
-                  <div className="mb-2">
-                    <label>Company Name</label>
-                    <input className="form-control" name="CompanyName" value={editEmployer.CompanyName} onChange={handleEditChange} required />
-                  </div>
-                  <div className="mb-2">
-                    <label>Description</label>
-                    <textarea className="form-control" name="companyProfileDescription" value={editEmployer.companyProfileDescription || ''} onChange={handleEditChange} />
-                  </div>
-                  <div className="mb-2">
-                    <label>Location</label>
-                    <input className="form-control" name="Location" value={editEmployer.Location} onChange={handleEditChange} />
-                  </div>
-                  <div className="mb-2">
-                    <label>Website</label>
-                    <input className="form-control" name="Website" value={editEmployer.Website} onChange={handleEditChange} />
-                  </div>
-                  <div className="mb-2">
-                    <label>Team Size</label>
-                    <input className="form-control" name="TeamSize" value={editEmployer.TeamSize} onChange={handleEditChange} />
-                  </div>
-                  <div className="mb-2">
-                    <label>Industry</label>
-                    <input className="form-control" name="IndustryId" value={editEmployer.IndustryId} onChange={handleEditChange} />
-                  </div>
-                  <div className="mb-2">
-                    <label>Contact</label>
-                    <input className="form-control" name="Contact" value={editEmployer.Contact} onChange={handleEditChange} required />
-                  </div>
-                  <div className="mb-2">
-                    <label>Logo URL</label>
-                    <input className="form-control" name="UrlCompanyLogo" value={editEmployer.UrlCompanyLogo} onChange={handleEditChange} />
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button className="btn btn-secondary" type="button" onClick={()=>setShowEditModal(false)}>Cancel</button>
-                  <button className="btn btn-primary" type="submit">Save</button>
-                </div>
-              </form>
             </div>
           </div>
         </div>

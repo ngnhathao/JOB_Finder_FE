@@ -1,6 +1,6 @@
 import API_CONFIG from '../config/api.config';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7266/api';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5194/api';
 
 // Định nghĩa class trước
 class ApiServiceClass {
@@ -98,6 +98,12 @@ class ApiServiceClass {
     const options = API_CONFIG.getRequestOptions(method, data);
     return API_CONFIG.handleResponse(await fetch(url, options));
   }
+
+  static async getCompanyProfileById(id) {
+    const url = API_CONFIG.getUrl(`CompanyProfile/${id}`);
+    const options = API_CONFIG.getRequestOptions();
+    return API_CONFIG.handleResponse(await fetch(url, options));
+  }
 }
 
 // Sau đó tạo object từ class
@@ -151,7 +157,8 @@ const ApiService = {
     const url = API_CONFIG.getUrl(`${API_CONFIG.ENDPOINTS.USER.BASE}/${id}`);
     const options = { method: 'DELETE' };
     return fetch(url, options);
-  }
+  },
+  getCompanyProfileById: ApiServiceClass.getCompanyProfileById
 };
 
 export default ApiService; 

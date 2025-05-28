@@ -1,5 +1,7 @@
+"use client";
 import dynamic from "next/dynamic";
-import employersInfo from "@/data/topCompany";
+import { useEffect, useState } from "react";
+import ApiService from "@/services/api.service";
 import LoginPopup from "@/components/common/form/login/LoginPopup";
 import FooterDefault from "@/components/footer/common-footer";
 import DefaulHeader from "@/components/header/DefaulHeader";
@@ -11,17 +13,28 @@ import Social from "@/components/employer-single-pages/social/Social";
 import PrivateMessageBox from "@/components/employer-single-pages/shared-components/PrivateMessageBox";
 import Image from "next/image";
 
-export const metadata = {
-  title:
-    "Employers Single Dyanmic V1 || Superio - Job Borad React NextJS Template",
-  description: "Superio - Job Borad React NextJS Template",
-};
-
 const EmployersSingleV1 = ({ params }) => {
   const id = params.id;
+  const [company, setCompany] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const employer =
-    employersInfo.find((item) => item.id == id) || employersInfo[0];
+  useEffect(() => {
+    setLoading(true);
+    ApiService.getCompanyProfileById(id)
+      .then((data) => {
+        setCompany(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, [id]);
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!company) return <div>No company found.</div>;
 
   return (
     <>
@@ -49,38 +62,33 @@ const EmployersSingleV1 = ({ params }) => {
                     <Image
                       width={100}
                       height={100}
-                      src={employer?.img}
+                      src={company.urlCompanyLogo || "/no-logo.png"}
                       alt="logo"
                     />
                   </span>
-                  <h4>{employer?.name}</h4>
+                  <h4>{company.companyName}</h4>
 
                   <ul className="job-info">
                     <li>
                       <span className="icon flaticon-map-locator"></span>
-                      {employer?.location}
+                      {company.location}
                     </li>
                     {/* compnay info */}
                     <li>
                       <span className="icon flaticon-briefcase"></span>
-                      {employer?.jobType}
+                      {company.teamSize}
                     </li>
                     {/* location info */}
                     <li>
-                      <span className="icon flaticon-telephone-1"></span>
-                      {employer?.phone}
-                    </li>
-                    {/* time info */}
-                    <li>
                       <span className="icon flaticon-mail"></span>
-                      {employer?.email}
+                      {company.website}
                     </li>
                     {/* salary info */}
                   </ul>
                   {/* End .job-info */}
 
                   <ul className="job-other-info">
-                    <li className="time">Open Jobs – {employer.jobNumber}</li>
+                    <li className="time">{company.industryName}</li>
                   </ul>
                   {/* End .job-other-info */}
                 </div>
@@ -111,7 +119,7 @@ const EmployersSingleV1 = ({ params }) => {
                     <div className="apply-modal-content modal-content">
                       <div className="text-center">
                         <h3 className="title">
-                          Send message to {employer.name}
+                          Send message to {company.companyName}
                         </h3>
                         <button
                           type="button"
@@ -142,7 +150,7 @@ const EmployersSingleV1 = ({ params }) => {
             <div className="row">
               <div className="content-column col-lg-8 col-md-12 col-sm-12">
                 {/*  job-detail */}
-                <JobDetailsDescriptions />
+                <JobDetailsDescriptions description={company.companyProfileDescription} />
                 {/* End job-detail */}
 
                 {/* <!-- Related Jobs --> */}
@@ -169,22 +177,19 @@ const EmployersSingleV1 = ({ params }) => {
                       {/*  compnay-info */}
                       <ul className="company-info mt-0">
                         <li>
-                          Primary industry: <span>Software</span>
+                          Company name: <span>{company.companyName}</span>
                         </li>
                         <li>
-                          Company size: <span>501-1,000</span>
+                          Location: <span>{company.location}</span>
                         </li>
                         <li>
-                          Founded in: <span>2011</span>
+                          Company size: <span>{company.teamSize}</span>
                         </li>
                         <li>
-                          Phone: <span>{employer?.phone}</span>
+                          Website: <span>{company.website}</span>
                         </li>
                         <li>
-                          Email: <span>{employer?.email}</span>
-                        </li>
-                        <li>
-                          Location: <span>{employer?.location}</span>
+                          Industry: <span>{company.industryName}</span>
                         </li>
                         <li>
                           Social media:
@@ -195,29 +200,19 @@ const EmployersSingleV1 = ({ params }) => {
 
                       <div className="btn-box">
                         <a
-                          href="#"
+                          href={company.website?.startsWith('http') ? company.website : `https://${company.website}`}
                           className="theme-btn btn-style-three"
                           style={{ textTransform: "lowercase" }}
+                          target="_blank"
+                          rel="noopener noreferrer"
                         >
-                          www.{employer?.name}.com
+                          {company.website}
                         </a>
                       </div>
                       {/* btn-box */}
                     </div>
                   </div>
                   {/* End company-widget */}
-
-                  <div className="sidebar-widget">
-                    {/* <!-- Map Widget --> */}
-                    <h4 className="widget-title">Job Location</h4>
-                    <div className="widget-content">
-                      <div style={{ height: "300px", width: "100%" }}>
-                        <MapJobFinder />
-                      </div>
-                    </div>
-                    {/* <!--  Map Widget --> */}
-                  </div>
-                  {/* End sidebar-widget */}
                 </aside>
                 {/* End .sidebar */}
               </div>

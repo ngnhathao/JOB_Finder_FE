@@ -34,45 +34,52 @@ const FormContent = ({ isPopup = false }) => {
 
     try {
       const responseData = await authService.login(formData.email, formData.password);
-      console.log('Login response:', responseData);
       const user = responseData.user || {};
-      dispatch(setLoginState({ isLoggedIn: true, user: user.fullName, role: responseData.role }));
 
-      // Lưu thông tin user vào localStorage để header lấy tên
-      localStorage.setItem('user', JSON.stringify({
+      // Lưu thông tin user vào localStorage trước
+      const userInfo = {
         fullName: user.fullName || '',
         avatar: user.image || '/images/resource/company-6.png',
         email: user.email || formData.email
-      }));
+      };
 
-      if (user.id) {
-        localStorage.setItem('userId', user.id);
-      }
+      // Đảm bảo tất cả dữ liệu được lưu trước khi chuyển hướng
+      await Promise.all([
+        // Lưu localStorage
+        new Promise(resolve => {
+          localStorage.setItem('user', JSON.stringify(userInfo));
+          if (user.id) {
+            localStorage.setItem('userId', user.id);
+          }
+          resolve();
+        }),
+        // Cập nhật Redux state
+        new Promise(resolve => {
+          dispatch(setLoginState({ 
+            isLoggedIn: true, 
+            user: userInfo.fullName, 
+            role: responseData.role 
+          }));
+          resolve();
+        })
+      ]);
 
       // Kích hoạt nút đóng modal nếu là popup
       if (isPopup && closeBtnRef.current) {
-          closeBtnRef.current.click();
+        closeBtnRef.current.click();
       }
 
-      // Chuyển hướng dựa trên role sau khi đăng nhập thành công
+      // Đợi một chút để đảm bảo state đã được cập nhật
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Chuyển hướng dựa trên role
       const userRole = responseData.role || user.role;
-      switch (userRole) {
-        case 'Admin':
-          router.push('/admin-dashboard/dashboard');
-          break;
-        case 'Company':
-          router.push('/');
-          break;
-        case 'Candidate':
-          router.push('/');
-          break;
-        default:
-          router.refresh();
-          break;
-      }
+      const redirectPath = userRole === 'Admin' ? '/admin-dashboard/dashboard' : '/';
+      
+      // Sử dụng window.location.href thay vì router để tránh hydration issues
+      window.location.href = redirectPath;
 
     } catch (error) {
-      // Handle non-JSON or authentication errors
       if (error.message && error.message.includes('Invalid credentials')) {
         setError('Invalid email or password.');
       } else if (error.message && error.message.includes('Unexpected token')) {

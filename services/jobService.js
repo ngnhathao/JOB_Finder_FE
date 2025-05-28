@@ -212,11 +212,16 @@ export const jobService = {
 
       console.log(`Raw API response data for getJobById (ID ${id}):`, job); // Thêm log dữ liệu thô
 
+      if (!job) return <div>Loading...</div>;
+      const levelName = JOB_LEVELS[job.levelId] || "N/A";
+
       // Ánh xạ dữ liệu từ API sang cấu trúc frontend
       const mappedJob = {
-        id: job.jobId, // Sử dụng jobId từ API
+        id: job.jobId,
+        title: job.title,
         jobTitle: job.title,
         description: job.description,
+        addressDetail: job.addressDetail,
         // company: job.companyId, // Có thể cần fetch tên công ty
         location: `${job.addressDetail || ''}${job.addressDetail && job.provinceName ? ', ' : ''}${job.provinceName || ''}`.trim(),
         provinceName: job.provinceName, // Add provinceName field
@@ -244,6 +249,8 @@ export const jobService = {
         // industry: mapIndustryIdToName(job.industryId),
       };
 
+      console.log("Job data:", job);
+
       return mappedJob;
     } catch (error) {
       console.error(`Error fetching job with ID ${id} from backend API:`, error);
@@ -257,6 +264,16 @@ export const jobService = {
       return response.data;
     } catch (error) {
       console.error("Error fetching job types:", error);
+      throw error;
+    }
+  },
+
+  getJobLevels: async () => {
+    try {
+      const response = await axios.get(`${API_URL}/Level`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching job levels:", error);
       throw error;
     }
   },
@@ -318,10 +335,20 @@ export const jobService = {
       // Use the correct endpoint for CompanyProfile
       const response = await axios.get(`${API_URL}/CompanyProfile`);
       // Map the response data to the expected structure
+      const industryName = INDUSTRIES[response.data.industryId] || "";
       return response.data.map(company => ({
-        id: company.userId, // Use userId from API as id
-        name: company.companyName, // Use companyName from API as name
-        logo: company.urlCompanyLogo || '/images/company-logo/default-logo.png' // Use urlCompanyLogo from API
+        id: company.userId,
+        name: company.companyName,
+        description: company.companyProfileDescription,
+        location: company.location,
+        logo: company.urlCompanyLogo || '/images/company-logo/default-logo.png',
+        logoLgr: company.imageLogoLgr,
+        teamSize: company.teamSize,
+        website: company.website,
+        contact: company.contact,
+        industryId: company.industryId,
+        isActive: company.isActive,
+        industryName: industryName,
       }));
     } catch (error) {
       console.error("Error fetching companies:", error);
@@ -345,7 +372,8 @@ export const jobService = {
       // Trả về mảng rỗng khi có lỗi
       return [];
     }
-  }
+  },
+
 };
 
 

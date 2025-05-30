@@ -180,34 +180,35 @@ const EmployersSingleV1 = ({ params }) => {
                           Company name: <span>{company.companyName}</span>
                         </li>
                         <li>
+                          Industry: <span>{company.industryName}</span>
+                        </li>
+                        <li>
                           Location: <span>{company.location}</span>
                         </li>
                         <li>
                           Company size: <span>{company.teamSize}</span>
                         </li>
                         <li>
-                          Website: <span>{company.website}</span>
+                          Contact: <span>{company.contact}</span>
                         </li>
-                        <li>
-                          Industry: <span>{company.industryName}</span>
-                        </li>
-                        <li>
+                        {/* <li>
                           Social media:
                           <Social />
-                        </li>
+                        </li> */}
                       </ul>
                       {/* End compnay-info */}
 
                       <div className="btn-box">
-                        <a
-                          href={company.website?.startsWith('http') ? company.website : `https://${company.website}`}
-                          className="theme-btn btn-style-three"
-                          style={{ textTransform: "lowercase" }}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          {company.website}
-                        </a>
+                        {company?.website && (
+                          <a
+                            href={company.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="theme-btn btn-style-three"
+                          >
+                            Visit company website
+                          </a>
+                        )}
                       </div>
                       {/* btn-box */}
                     </div>

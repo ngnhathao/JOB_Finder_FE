@@ -226,7 +226,10 @@ const JobSingleDynamicV3 = ({ params }) => {
                         )}
                         <div>
                           <h5 className="company-name" style={{ margin: 0 }}>{company?.companyName}</h5>
-                          <a href="#" className="profile-link">
+                          <a
+                            href={`/employers-single-v1/${company?.userId}`}
+                            className="profile-link"
+                          >
                             View company profile
                           </a>
                         </div>

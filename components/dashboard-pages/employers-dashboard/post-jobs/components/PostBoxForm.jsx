@@ -208,15 +208,12 @@ const PostBoxForm = () => {
       postFormData.append('CompanyId', user.userId);
       postFormData.append('Salary', formData.salary);
       postFormData.append('IndustryId', formData.industryId);
-
-      // Format dates as ISO 8601 strings (with time part)
-      if (formData.expiryDate) postFormData.append('ExpiryDate', new Date(formData.expiryDate).toISOString());
-      if (formData.timeStart) postFormData.append('TimeStart', new Date(formData.timeStart).toISOString());
-      if (formData.timeEnd) postFormData.append('TimeEnd', new Date(formData.timeEnd).toISOString());
-
+      postFormData.append('ExpiryDate', formData.expiryDate);
       postFormData.append('LevelId', formData.levelId);
       postFormData.append('JobTypeId', formData.jobTypeId);
       postFormData.append('ExperienceLevelId', formData.experienceLevelId);
+      postFormData.append('TimeStart', formData.timeStart);
+      postFormData.append('TimeEnd', formData.timeEnd);
       postFormData.append('Status', 0);
       postFormData.append('ProvinceName', formData.provinceName);
       postFormData.append('AddressDetail', formData.addressDetail);
@@ -224,13 +221,6 @@ const PostBoxForm = () => {
       if (selectedImage) {
         postFormData.append('ImageFile', selectedImage);
       }
-
-      // Log FormData content before sending
-      console.log('FormData content being sent:');
-      for (let pair of postFormData.entries()) {
-        console.log(pair[0]+ ': ' + pair[1]);
-      }
-      console.log('End of FormData content');
 
       const result = await ApiService.createJob(postFormData);
       console.log("API gọi thành công", result);
@@ -456,22 +446,7 @@ const PostBoxForm = () => {
         </div>
 
         {/* Image File Input */}
-        <div className="form-group col-lg-6 col-md-12">
-          <label>Company Logo (Optional)</label>
-          <input
-            type="file"
-            name="imageFile"
-            accept="image/*"
-            onChange={handleInputChange}
-            className="form-control"
-            disabled={isLoading}
-          />
-          {imagePreviewUrl && (
-            <div style={{ marginTop: '10px' }}>
-              <img src={imagePreviewUrl} alt="Image Preview" style={{ maxWidth: '100px', maxHeight: '100px' }} />
-            </div>
-          )}
-        </div>
+        
 
         {/* Submit Button */}
         <div className="form-group col-lg-12 col-md-12 text-right">

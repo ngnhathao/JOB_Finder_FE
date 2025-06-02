@@ -374,6 +374,44 @@ export const jobService = {
     }
   },
 
+  updateJob: async (jobId, jobData) => {
+    try {
+      const formData = new FormData();
+      
+      // Thêm các trường dữ liệu vào FormData
+      formData.append('Title', jobData.title);
+      formData.append('Description', jobData.description);
+      formData.append('CompanyId', parseInt(jobData.companyId));
+      formData.append('Salary', parseInt(jobData.salary));
+      formData.append('IndustryId', parseInt(jobData.industryId));
+      formData.append('ExpiryDate', new Date(jobData.expiryDate).toISOString());
+      formData.append('LevelId', parseInt(jobData.levelId));
+      formData.append('JobTypeId', parseInt(jobData.jobTypeId));
+      formData.append('ExperienceLevelId', parseInt(jobData.experienceLevelId));
+      formData.append('TimeStart', new Date(jobData.timeStart).toISOString());
+      formData.append('TimeEnd', new Date(jobData.timeEnd).toISOString());
+      formData.append('Status', parseInt(jobData.status === 'Active' ? 1 : 0));
+      formData.append('ProvinceName', jobData.provinceName);
+      formData.append('AddressDetail', jobData.addressDetail);
+
+      console.log('Dữ liệu gửi lên server:', Object.fromEntries(formData));
+
+      const response = await axios.put(
+        `${API_URL}/Job/${jobId}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Lỗi khi cập nhật công việc:", error);
+      throw error;
+    }
+  },
+
 };
 
 

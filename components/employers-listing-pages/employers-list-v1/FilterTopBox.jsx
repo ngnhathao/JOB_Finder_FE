@@ -235,7 +235,7 @@ const FilterTopBox = () => {
                   />
                 </span>
                 <div className="company-info-block"> {/* Keeping company-info-block div */}
-                 <h4 style={{ margin: 0 }}>
+                 <h4 style={{ margin: 0, textAlign: 'left' }}>
    <Link
      href={`/employers-single-v1/${company.userId}`}
      style={{

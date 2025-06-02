@@ -38,7 +38,7 @@ const JobSingleDynamicV3 = ({ params }) => {
   const getIndustryName = (id) => industries.find(i => i.industryId === id)?.industryName || "N/A";
   const getLevelName = (id) => levels.find(l => l.id === id)?.levelName || "N/A";
   const getJobTypeName = (id) => jobTypes.find(jt => jt.id === id)?.jobTypeName || "N/A";
-  const getExperienceLevelName = (id) => experienceLevels.find(el => el.id === id)?.name || "N/A";
+  const getExperienceLevelName = (id) => experienceLevels.find(el => el.id === id)?.name || "N/A";  
   const getCompanyName = (companyId) => {
     const company = companies.find(c => String(c.id) === String(companyId));
     return company ? company.name : "N/A";

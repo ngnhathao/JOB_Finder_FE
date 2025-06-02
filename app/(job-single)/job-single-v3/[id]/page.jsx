@@ -14,6 +14,7 @@ import RelatedJobs2 from "@/components/job-single-pages/related-jobs/RelatedJobs
 import JobOverView2 from "@/components/job-single-pages/job-overview/JobOverView2";
 import ApplyJobModalContent from "@/components/job-single-pages/shared-components/ApplyJobModalContent";
 import Image from "next/image";
+import { companyService } from "@/services/companyService";
 
 const JobSingleDynamicV3 = ({ params }) => {
   const [job, setJob] = useState(null);
@@ -21,7 +22,7 @@ const JobSingleDynamicV3 = ({ params }) => {
   const [levels, setLevels] = useState([]);
   const [jobTypes, setJobTypes] = useState([]);
   const [experienceLevels, setExperienceLevels] = useState([]);
-  const [companies, setCompanies] = useState([]);
+  const [company, setCompany] = useState(null);
 
   useEffect(() => {
     jobService.getJobById(params.id)
@@ -31,9 +32,16 @@ const JobSingleDynamicV3 = ({ params }) => {
     jobService.getLevel && jobService.getLevel().then(setLevels); // Nếu có hàm getLevels
     jobService.getJobTypes().then(setJobTypes);
     jobService.getExperienceLevels().then(setExperienceLevels);
-    jobService.getCompanies().then(setCompanies);
     jobService.getJobLevels().then(setLevels);
   }, [params.id]);
+
+  useEffect(() => {
+    if (job?.companyId) {
+      companyService.getCompanyById(job.companyId)
+        .then(setCompany)
+        .catch(() => setCompany(null));
+    }
+  }, [job?.companyId]);
 
   const getIndustryName = (id) => industries.find(i => i.industryId === id)?.industryName || "N/A";
   const getLevelName = (id) => levels.find(l => l.id === id)?.levelName || "N/A";
@@ -62,7 +70,9 @@ const JobSingleDynamicV3 = ({ params }) => {
         }))
     : [];
 
-  const levelName = levels.find(l => l.id === job.levelId)?.levelName || "N/A";
+  const levelName = job?.levelId
+    ? levels.find(l => l.id === job.levelId)?.levelName || "N/A"
+    : "N/A";
   return (
     <>
       {/* <!-- Header Span --> */}
@@ -92,7 +102,7 @@ const JobSingleDynamicV3 = ({ params }) => {
                         <ul className="job-info">
                           <li>
                             <span className="icon flaticon-briefcase"></span>
-                            {getCompanyName(job?.companyId)}
+                            {company?.companyName  || "N/A"}
                           </li>
                           {/* company info */}
                           <li>
@@ -199,35 +209,50 @@ const JobSingleDynamicV3 = ({ params }) => {
 
                   <div className="sidebar-widget company-widget">
                     <div className="widget-content">
-                      <div className="company-title">
-                        <div className="company-logo">
-                          {job?.imageJob && (
-                            <Image
-                              width={54}
-                              height={53}
-                              src={job.imageJob}
-                              alt="resource"
-                            />
-                          )}
+                      <div
+                        className="company-title"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "16px",
+                          textAlign: "left",
+                          paddingLeft: 0,
+                        }}
+                      >
+                        {company?.urlCompanyLogo && (
+                          <Image
+                            width={54}
+                            height={53}
+                            src={company.urlCompanyLogo}
+                            alt={company.companyName}
+                            style={{ borderRadius: "8px", objectFit: "contain", background: "#fff" }}
+                          />
+                        )}
+                        <div>
+                          <h5 className="company-name" style={{ margin: 0 }}>{company?.companyName}</h5>
+                          <a
+                            href={`/employers-single-v1/${company?.userId}`}
+                            className="profile-link"
+                          >
+                            View company profile
+                          </a>
                         </div>
-                        <h5 className="company-name">{getCompanyName(job?.companyId)}</h5>
-                        <a href="#" className="profile-link">
-                          View company profile
-                        </a>
                       </div>
                       {/* End company title */}
 
-                      <CompnayInfo />
+                      <CompnayInfo companyId={job?.companyId} />
 
                       <div className="btn-box">
-                        <a
-                          href="#"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="theme-btn btn-style-three"
-                        >
-                          {job?.link}
-                        </a>
+                        {company?.website && (
+                          <a
+                            href={company.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="theme-btn btn-style-three"
+                          >
+                            Visit company website
+                          </a>
+                        )}
                       </div>
                       {/* End btn-box */}
                     </div>

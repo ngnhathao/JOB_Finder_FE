@@ -9,6 +9,8 @@ const index = ({ footerStyle = "" }) => {
         {/* <!--Widgets Section--> */}
         <div className="widgets-section" data-aos="fade-up">
           <div className="row">
+            {/* Xóa bỏ cột hiển thị logo, số điện thoại, địa chỉ, email */}
+            {/*
             <div className="big-column col-xl-4 col-lg-3 col-md-12">
               <div className="footer-column about-widget">
                 <div className="logo">
@@ -34,9 +36,11 @@ const index = ({ footerStyle = "" }) => {
                 </p>
               </div>
             </div>
+            */}
             {/* End footer left widget */}
 
-            <div className="big-column col-xl-8 col-lg-9 col-md-12">
+            {/* Điều chỉnh cột bên phải để chiếm toàn bộ chiều rộng */}
+            <div className="big-column col-xl-12 col-lg-12 col-md-12">
               <div className="row">
                 <FooterContent />
               </div>

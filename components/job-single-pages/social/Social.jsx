@@ -1,22 +1,47 @@
-const Social = () => {
-  const socialContent = [
-    { id: 1, icon: "fa-facebook-f", link: "https://www.facebook.com/" },
-    { id: 2, icon: "fa-twitter", link: "https://www.twitter.com/" },
-    { id: 3, icon: "fa-instagram", link: "https://www.instagram.com/" },
-    { id: 4, icon: "fa-linkedin-in", link: "https://www.linkedin.com/" },
-  ];
+"use client";
+import { useEffect, useState } from "react";
+import { companyService } from "@/services/companyService";
+
+const Social = ({ companyId }) => {
+  const [company, setCompany] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCompanyInfo = async () => {
+      try {
+        setLoading(true);
+        const data = await companyService.getCompanyById(companyId);
+        setCompany(data);
+      } catch (err) {
+        console.error("Error fetching company info:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (companyId) {
+      fetchCompanyInfo();
+    }
+  }, [companyId]);
+
+  if (loading) {
+    return null;
+  }
+
+  if (!company?.website) {
+    return null;
+  }
+
   return (
     <div className="social-links">
-      {socialContent.map((item) => (
-        <a
-          href={item.link}
-          target="_blank"
-          rel="noopener noreferrer"
-          key={item.id}
-        >
-          <i className={`fab ${item.icon}`}></i>
-        </a>
-      ))}
+      <a
+        href={company.website}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Company Website"
+      >
+        <i className="fas fa-globe"></i>
+      </a>
     </div>
   );
 };

@@ -15,6 +15,7 @@ import JobOverView2 from "@/components/job-single-pages/job-overview/JobOverView
 import ApplyJobModalContent from "@/components/job-single-pages/shared-components/ApplyJobModalContent";
 import Image from "next/image";
 import { companyService } from "@/services/companyService";
+import DefaulHeader2 from "@/components/header/DefaulHeader2";
 
 const JobSingleDynamicV3 = ({ params }) => {
   const [job, setJob] = useState(null);
@@ -81,7 +82,7 @@ const JobSingleDynamicV3 = ({ params }) => {
       <LoginPopup />
       {/* End Login Popup Modal */}
 
-      <DefaulHeader />
+      <DefaulHeader2 />
       {/* <!--End Main Header --> */}
 
       <MobileMenu />

@@ -1,3 +1,6 @@
+'use client'
+
+import { useState, useEffect } from "react";
 import CallToActions from "../components/CallToActions";
 import Categories from "../components/Categories";
 import DestinationRangeSlider from "../components/DestinationRangeSlider";
@@ -7,6 +10,43 @@ import FoundationDate from "../components/FoundationDate";
 import SearchBox from "../components/SearchBox";
 
 const FilterSidebar = () => {
+    // Thêm state để lưu dữ liệu lookup
+    const [fetchedProvinces, setFetchedProvinces] = useState([]);
+    const [fetchedIndustries, setFetchedIndustries] = useState([]);
+    const [loadingLookupData, setLoadingLookupData] = useState(true);
+    const [lookupDataError, setLookupDataError] = useState(null);
+
+    // Fetch dữ liệu lookup khi component mount
+    useEffect(() => {
+        const fetchLookupData = async () => {
+            try {
+                setLoadingLookupData(true);
+                const [provincesRes, industriesRes] = await Promise.all([
+                    fetch("https://provinces.open-api.vn/api/").then(res => res.json()), // Fetch provinces
+                    fetch("/api/Industry").then(res => res.json()), // Fetch industries
+                ]);
+                setFetchedProvinces(provincesRes);
+                setFetchedIndustries(industriesRes);
+                console.log('Employer Filter Sidebar Lookup Data:', { provincesRes, industriesRes });
+            } catch (err) {
+                setLookupDataError('Failed to fetch lookup data in sidebar');
+                console.error('Failed to fetch lookup data in FilterSidebar', err);
+            } finally {
+                setLoadingLookupData(false);
+            }
+        };
+        fetchLookupData();
+    }, []); // Mảng rỗng đảm bảo chỉ chạy một lần khi mount
+
+    // Hiển thị loading hoặc lỗi nếu cần
+    if (loadingLookupData) {
+        return <div className="inner-column">Loading filters...</div>;
+    }
+
+    if (lookupDataError) {
+        return <div className="inner-column text-danger">Error loading filters: {lookupDataError}</div>;
+    }
+
     return (
         <div className="inner-column pd-right">
             <div className="filters-outer">
@@ -29,34 +69,24 @@ const FilterSidebar = () => {
                 <div className="filter-block">
                     <h4>Location</h4>
                     <div className="form-group">
-                        <LocationBox />
+                        <LocationBox provinces={fetchedProvinces} />
                     </div>
-
-                    <p>Radius around selected destination</p>
-                    <DestinationRangeSlider />
                 </div>
                 {/* <!-- Filter Block --> */}
 
                 <div className="filter-block">
-                    <h4>Category</h4>
+                    <h4>Industry</h4>
                     <div className="form-group">
-                        <Categories />
+                        <Categories industries={fetchedIndustries} />
                     </div>
                 </div>
                 {/* <!-- Filter Block --> */}
 
-                {/* <div className="filter-block">
-                    <h4>Compnay Size</h4>
+                <div className="filter-block">
+                    <h4>Company Size</h4>
                     <div className="form-group">
                         <CompanySize />
                     </div>
-                </div> */}
-                {/* <!-- Filter Block --> */}
-
-                <div className="filter-block">
-                    <h4>Foundation Date</h4>
-
-                    <FoundationDate />
                 </div>
                 {/* <!-- Filter Block --> */}
             </div>

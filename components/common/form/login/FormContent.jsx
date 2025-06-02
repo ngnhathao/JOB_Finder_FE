@@ -34,31 +34,60 @@ const FormContent = ({ isPopup = false }) => {
 
     try {
       const responseData = await authService.login(formData.email, formData.password);
-      
-      dispatch(setLoginState({ isLoggedIn: true, user: responseData.name, role: responseData.role }));
+      const user = responseData.user || {};
+
+      // Lưu thông tin user vào localStorage trước
+      const userInfo = {
+        
+        fullName: user.fullName || '',
+        avatar: user.image || '/images/resource/company-6.png',
+        email: user.email || formData.email
+      };
+
+      // Đảm bảo tất cả dữ liệu được lưu trước khi chuyển hướng
+      await Promise.all([
+        // Lưu localStorage
+        new Promise(resolve => {
+          localStorage.setItem('user', JSON.stringify(userInfo));
+          if (user.id) {
+            localStorage.setItem('userId', user.id);
+          }
+          resolve();
+        }),
+        // Cập nhật Redux state
+        new Promise(resolve => {
+          dispatch(setLoginState({ 
+            isLoggedIn: true, 
+            user: userInfo.fullName, 
+            role: responseData.role 
+          }));
+          resolve();
+        })
+      ]);
 
       // Kích hoạt nút đóng modal nếu là popup
       if (isPopup && closeBtnRef.current) {
-          closeBtnRef.current.click();
+        closeBtnRef.current.click();
       }
 
-      // Chuyển hướng dựa trên role sau khi đăng nhập thành công
-      const userRole = authService.getRole();
-      switch (userRole) {
-        case 'Admin':
-          router.push('/admin-dashboard'); // Vẫn chuyển Admin đến dashboard riêng (nếu có)
-          break;
-        case 'Employer':
-        case 'User': // Hoặc 'Candidate'
-        default:
-          // Sau khi login thành công, refresh trang hiện tại để cập nhật UI
-          router.refresh();
-          // Không cần push '/' nữa nếu modal đã đóng và refresh trang hiện tại
-          break;
-      }
+      // Đợi một chút để đảm bảo state đã được cập nhật
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Chuyển hướng dựa trên role
+      const userRole = responseData.role || user.role;
+      const redirectPath = userRole === 'Admin' ? '/admin-dashboard/dashboard' : '/';
+      
+      // Sử dụng window.location.href thay vì router để tránh hydration issues
+      window.location.href = redirectPath;
 
     } catch (error) {
-      setError(error.message || 'Invalid email or password');
+      if (error.message && error.message.includes('Invalid credentials')) {
+        setError('Invalid email or password.');
+      } else if (error.message && error.message.includes('Unexpected token')) {
+        setError('Network or server error.');
+      } else {
+        setError(error.message || 'An error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -127,6 +156,13 @@ const FormContent = ({ isPopup = false }) => {
 
         {/* Nút ẩn để đóng modal */}
         {isPopup && <button ref={closeBtnRef} data-bs-dismiss="modal" style={{ display: 'none' }}></button>}
+
+{/* Simple Loading Overlay */}
+{loading && (
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255, 255, 255, 0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+            <p>Loading...</p>
+          </div>
+        )}
 
       </form>
       {/* End form */}

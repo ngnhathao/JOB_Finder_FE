@@ -15,9 +15,8 @@ const index = () => {
             >
               <div className="title-box">
                 <h3>
-                  There Are <span className="colored">93,178</span> Postings
-                  Here
-                  <br /> For you!
+                Find Your Future Job with <span className="colored">AI</span> 
+                  <br /> <span className="colored">AJP</span> Stands by Your Side!
                 </h3>
                 <div className="text">
                   Find Jobs, Employment & Career Opportunities
@@ -31,7 +30,7 @@ const index = () => {
               {/* <!-- Job Search Form --> */}
 
               {/* <!-- Popular Search --> */}
-              <PopularSearch />
+             
               {/* <!-- End Popular Search --> */}
             </div>
           </div>

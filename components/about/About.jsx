@@ -9,15 +9,14 @@ const About = () => {
           <div className="sec-title">
             <h2>Millions of Jobs. Find the one that suits you.</h2>
             <div className="text">
-              Search all the open positions on the web. Get your own
-              personalized salary estimate. Read reviews on over 600,000
-              companies worldwide.
+            Discover jobs tailored just for you with AI-powered matching. Create a standout video profile, build a professional CV, and track your applications—all in one place.
             </div>
           </div>
           <ul className="list-style-one">
-            <li>Bring to the table win-win survival</li>
-            <li>Capitalize on low hanging fruit to identify</li>
-            <li>But I must explain to you how all this</li>
+            <li>AI matches you with the perfect job!</li>
+            <li>Stand out with a video profile.</li>
+            <li>Build a professional CV in minutes</li>
+            <li>Track applications and schedule interviews</li>
           </ul>
           <Link href="/register" className="theme-btn btn-style-one bg-blue">
             <span className="btn-title">Get Started</span>
@@ -31,7 +30,7 @@ const About = () => {
           <Image
             width={600}
             height={600}
-            src="/images/resource/image-2.jpg"
+            src="/images/resource/bannerHome.png"
             alt="about"
           />
         </figure>
@@ -41,14 +40,14 @@ const About = () => {
           <div className="check-box">
             <span className="flaticon-tick"></span>
           </div>
-          <span className="title">300k+ Employers</span>
+          <span className="title">Employers</span>
           <figure className="image">
             <Image
-              width={234}
+              width={100}
               height={61}
-              layout="responsive"
               src="/images/resource/multi-logo.png"
               alt="resource"
+              className="w-full h-auto"
             />
           </figure>
         </div>

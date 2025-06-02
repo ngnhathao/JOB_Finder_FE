@@ -1,121 +1,205 @@
-
 'use client'
 
+import { useState, useEffect } from "react";
 import Select from "react-select";
+import axios from 'axios';
 
-const FormInfoBox = () => {
-    const catOptions = [
-        { value: "Banking", label: "Banking" },
-        { value: "Digital & Creative", label: "Digital & Creative" },
-        { value: "Retail", label: "Retail" },
-        { value: "Human Resources", label: "Human Resources" },
-        { value: "Managemnet", label: "Managemnet" },
-        { value: "Accounting & Finance", label: "Accounting & Finance" },
-        { value: "Digital", label: "Digital" },
-        { value: "Creative Art", label: "Creative Art" },
-    ];
+const FormInfoBox = ({ onFormChange, validationErrors, initialData, isEditing }) => {
+    const [formData, setFormData] = useState({
+        companyName: initialData?.companyName || "",
+        phone: initialData?.phone || "",
+        website: initialData?.website || "",
+        teamSize: initialData?.teamSize || "50 - 100", // Default value
+        location: initialData?.location || "", // Will store the selected province name
+        industryId: initialData?.industryId || "", // Will store the selected industry ID (number)
+        aboutCompany: initialData?.aboutCompany || "",
+    });
+
+    const [provinces, setProvinces] = useState([]);
+    const [industries, setIndustries] = useState([]);
+
+    // Fetch provinces on component mount
+    useEffect(() => {
+        const fetchProvinces = async () => {
+            try {
+                const response = await axios.get('https://provinces.open-api.vn/api/');
+                const sortedProvinces = response.data.sort((a, b) => a.name.localeCompare(b.name));
+                setProvinces(sortedProvinces);
+            } catch (error) {
+                console.error("Error fetching provinces:", error);
+            }
+        };
+        fetchProvinces();
+    }, []); // Empty dependency array means this effect runs once on mount
+
+    // Fetch industries on component mount
+     useEffect(() => {
+        const fetchIndustries = async () => {
+            try {
+                // TODO: Use your actual API base URL instead of hardcoded localhost
+                const response = await axios.get('https://localhost:7266/api/Industry');
+                // Sort industries alphabetically by name
+                const sortedIndustries = response.data.sort((a, b) => a.industryName.localeCompare(b.industryName));
+                setIndustries(sortedIndustries);
+            } catch (error) {
+                console.error("Error fetching industries:", error);
+            }
+        };
+        fetchIndustries();
+    }, []); // Empty dependency array means this effect runs once on mount
+
+
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prevState => ({
+            ...prevState,
+            [name]: value,
+        }));
+        if (onFormChange) {
+             const updatedFormData = {
+                ...formData,
+                [name]: value,
+            };
+            onFormChange(updatedFormData);
+        }
+    };
+
+     // Handle select change for Team Size, Location, and Industry ID
+    const handleSelectChange = (e) => {
+        const { name, value } = e.target;
+        // For industryId, convert value to number
+        const processedValue = name === 'industryId' ? parseInt(value, 10) : value;
+
+         setFormData(prevState => ({
+            ...prevState,
+            [name]: processedValue,
+        }));
+        if (onFormChange) {
+             const updatedFormData = {
+                ...formData,
+                [name]: processedValue,
+            };
+            onFormChange(updatedFormData);
+        }
+    };
 
     return (
         <form className="default-form">
             <div className="row">
-                {/* <!-- Input --> */}
+                {/* <!-- Input - Company Name --> */}
                 <div className="form-group col-lg-6 col-md-12">
                     <label>Company name (optional)</label>
                     <input
                         type="text"
-                        name="name"
-                        placeholder="Invisionn"
+                        name="companyName"
                         required
+                        value={formData.companyName}
+                        onChange={handleInputChange}
+                         className={validationErrors.companyName ? 'form-control is-invalid' : 'form-control'}
+                        disabled={!isEditing}
                     />
+                    {validationErrors.companyName && <div className="invalid-feedback">{validationErrors.companyName}</div>}
                 </div>
 
-                {/* <!-- Input --> */}
-                <div className="form-group col-lg-6 col-md-12">
-                    <label>Email address</label>
-                    <input
-                        type="text"
-                        name="name"
-                        placeholder="ib-themes"
-                        required
-                    />
-                </div>
-
-                {/* <!-- Input --> */}
+                {/* <!-- Input - Phone (Contact) --> */}
                 <div className="form-group col-lg-6 col-md-12">
                     <label>Phone</label>
                     <input
                         type="text"
-                        name="name"
-                        placeholder="0 123 456 7890"
+                        name="phone"
                         required
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                         className={validationErrors.phone ? 'form-control is-invalid' : 'form-control'}
+                        disabled={!isEditing}
                     />
+                     {validationErrors.phone && <div className="invalid-feedback">{validationErrors.phone}</div>}
                 </div>
 
-                {/* <!-- Input --> */}
+                {/* <!-- Input - Website --> */}
                 <div className="form-group col-lg-6 col-md-12">
                     <label>Website</label>
                     <input
                         type="text"
-                        name="name"
-                        placeholder="www.invision.com"
+                        name="website"
                         required
+                        value={formData.website}
+                        onChange={handleInputChange}
+                         className={validationErrors.website ? 'form-control is-invalid' : 'form-control'}
+                        disabled={!isEditing}
                     />
+                     {validationErrors.website && <div className="invalid-feedback">{validationErrors.website}</div>}
                 </div>
 
-                {/* <!-- Input --> */}
+                 {/* <!-- Input - Location - Using Select for Provinces API --> */}
                 <div className="form-group col-lg-6 col-md-12">
-                    <label>Est. Since</label>
-                    <input
-                        type="text"
-                        name="name"
-                        placeholder="06.04.2020"
+                    <label>Location</label>
+                    <select
+                        className={validationErrors.location ? 'chosen-single form-select is-invalid' : 'chosen-single form-select'}
                         required
-                    />
+                        name="location"
+                        value={formData.location}
+                        onChange={handleSelectChange}
+                        disabled={!isEditing}
+                    >
+                        <option value="">Select Location</option>
+                        {provinces.map(province => (
+                            <option key={province.code} value={province.name}>
+                                {province.name}
+                            </option>
+                        ))}
+                    </select>
+                     {validationErrors.location && <div className="invalid-feedback">{validationErrors.location}</div>}
                 </div>
 
-                {/* <!-- Input --> */}
+                {/* <!-- Input - Team Size --> */}
                 <div className="form-group col-lg-6 col-md-12">
                     <label>Team Size</label>
-                    <select className="chosen-single form-select" required>
+                    <select className={validationErrors.teamSize ? 'chosen-single form-select is-invalid' : 'chosen-single form-select'} required name="teamSize" value={formData.teamSize} onChange={handleSelectChange}
+                        disabled={!isEditing}
+                    >
                         <option>50 - 100</option>
                         <option>100 - 150</option>
                         <option>200 - 250</option>
                         <option>300 - 350</option>
                         <option>500 - 1000</option>
                     </select>
+                    {validationErrors.teamSize && <div className="invalid-feedback">{validationErrors.teamSize}</div>}
                 </div>
 
-                {/* <!-- Search Select --> */}
-                <div className="form-group col-lg-6 col-md-12">
-                    <label>Multiple Select boxes </label>
-                    <Select
-                        defaultValue={[catOptions[2]]}
-                        isMulti
-                        name="colors"
-                        options={catOptions}
-                        className="basic-multi-select"
-                        classNamePrefix="select"
-                    />
-                </div>
-
-                {/* <!-- Input --> */}
-                <div className="form-group col-lg-6 col-md-12">
-                    <label>Allow In Search & Listing</label>
-                    <select className="chosen-single form-select">
-                        <option>Yes</option>
-                        <option>No</option>
+                {/* <!-- Input - Industry ID - Using Select for Industry API --> */}
+                 <div className="form-group col-lg-6 col-md-12">
+                    <label>Industry</label>
+                     <select
+                        className={validationErrors.industryId ? 'chosen-single form-select is-invalid' : 'chosen-single form-select'}
+                        required
+                        name="industryId"
+                        value={formData.industryId}
+                        onChange={handleSelectChange}
+                        disabled={!isEditing}
+                    >
+                        <option value="">Select Industry</option>
+                        {industries.map(industry => (
+                            <option key={industry.industryId} value={industry.industryId}>
+                                {industry.industryName}
+                            </option>
+                        ))}
                     </select>
+                     {validationErrors.industryId && <div className="invalid-feedback">{validationErrors.industryId}</div>}
                 </div>
 
-                {/* <!-- About Company --> */}
+                {/* <!-- About Company - CompanyProfileDescription --> */}
                 <div className="form-group col-lg-12 col-md-12">
                     <label>About Company</label>
-                    <textarea placeholder="Spent several years working on sheep on Wall Street. Had moderate success investing in Yugo's on Wall Street. Managed a small team buying and selling Pogo sticks for farmers. Spent several years licensing licorice in West Palm Beach, FL. Developed several new methods for working it banjos in the aftermarket. Spent a weekend importing banjos in West Palm Beach, FL.In this position, the Software Engineer collaborates with Evention's Development team to continuously enhance our current software solutions as well as create new solutions to eliminate the back-office operations and management challenges present"></textarea>
-                </div>
-
-                {/* <!-- Input --> */}
-                <div className="form-group col-lg-6 col-md-12">
-                    <button className="theme-btn btn-style-one">Save</button>
+                    <textarea
+                        name="aboutCompany"
+                        value={formData.aboutCompany}
+                        onChange={handleInputChange}
+                        required
+                         className={validationErrors.aboutCompany ? 'form-control is-invalid' : 'form-control'}
+                        disabled={!isEditing}
+                    ></textarea>
+                    {validationErrors.aboutCompany && <div className="invalid-feedback">{validationErrors.aboutCompany}</div>}
                 </div>
             </div>
         </form>

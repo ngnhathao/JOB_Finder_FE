@@ -6,15 +6,16 @@ import { useEffect, useState } from "react";
 import candidatesMenuData from "../../data/candidatesMenuData";
 import HeaderNavContent from "./HeaderNavContent";
 import { isActiveLink } from "../../utils/linkActiveChecker";
-
 import { usePathname } from "next/navigation";
+import { authService } from "../../services/authService";
+
 const DashboardCandidatesHeader = () => {
     const [navbar, setNavbar] = useState(false);
-
-
+    const [fullName, setFullName] = useState("Tài khoản của tôi");
+    const [avatar, setAvatar] = useState("/images/resource/candidate-1.png");
 
     const changeBackground = () => {
-        if (window.scrollY >= 0) {
+        if (typeof window !== 'undefined' && window.scrollY >= 0) {
             setNavbar(true);
         } else {
             setNavbar(false);
@@ -22,7 +23,27 @@ const DashboardCandidatesHeader = () => {
     };
 
     useEffect(() => {
-        window.addEventListener("scroll", changeBackground);
+        if (typeof window !== 'undefined') {
+            window.addEventListener("scroll", changeBackground);
+            
+            // Lấy thông tin user từ localStorage (nếu có)
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            if (user.fullName) setFullName(user.fullName);
+            else if (user.name) setFullName(user.name);
+            else {
+                // Nếu không có trong localStorage, thử lấy từ cookie
+                const userName = authService.getName();
+                if (userName) {
+                    setFullName(userName);
+                }
+            }
+            // Lấy avatar từ localStorage
+            if (user.avatar) {
+                setAvatar(user.avatar);
+            } else {
+                setAvatar("/images/resource/candidate-1.png"); // Default avatar if not found
+            }
+        }
     }, []);
 
     return (
@@ -41,11 +62,11 @@ const DashboardCandidatesHeader = () => {
                             <div className="logo">
                                 <Link href="/">
                                     <Image
-                                        alt="brand"
-                                        src="/images/logo.svg"
-                                        width={154}
-                                        height={50}
-                                        priority
+                                        alt="Logo JobFinder"
+                                        src="/images/jobfinder-logo.png"
+                                        width={90}
+                                        height={90}
+                                        title="JobFinder"
                                     />
                                 </Link>
                             </div>
@@ -62,12 +83,12 @@ const DashboardCandidatesHeader = () => {
                             <span className="count">1</span>
                             <span className="icon la la-heart-o"></span>
                         </button>
-                        {/* wishlisted menu */}
+                        {/* Danh sách yêu thích */}
 
                         <button className="menu-btn">
                             <span className="icon la la-bell"></span>
                         </button>
-                        {/* End notification-icon */}
+                        {/* Thông báo */}
 
                         {/* <!-- Dashboard Option --> */}
                         <div className="dropdown dashboard-option">
@@ -78,13 +99,13 @@ const DashboardCandidatesHeader = () => {
                                 aria-expanded="false"
                             >
                                 <Image
-                                    alt="avatar"
+                                    alt="Ảnh đại diện"
                                     className="thumb"
-                                    src="/images/resource/candidate-1.png"
+                                    src={avatar}
                                     width={50}
                                     height={50}
                                 />
-                                <span className="name">My Account</span>
+                                <span className="name">{fullName}</span>
                             </a>
 
                             <ul className="dropdown-menu">

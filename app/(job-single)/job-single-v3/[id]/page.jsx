@@ -1,5 +1,7 @@
+"use client";
 import dynamic from "next/dynamic";
-import jobs from "@/data/job-featured";
+import { useEffect, useState } from "react";
+import { jobService } from "@/services/jobService";
 import LoginPopup from "@/components/common/form/login/LoginPopup";
 import FooterDefault from "@/components/footer/common-footer";
 import DefaulHeader from "@/components/header/DefaulHeader";
@@ -12,16 +14,61 @@ import RelatedJobs2 from "@/components/job-single-pages/related-jobs/RelatedJobs
 import JobOverView2 from "@/components/job-single-pages/job-overview/JobOverView2";
 import ApplyJobModalContent from "@/components/job-single-pages/shared-components/ApplyJobModalContent";
 import Image from "next/image";
-
-export const metadata = {
-  title: "Job Single Dyanmic V3 || Superio - Job Borad React NextJS Template",
-  description: "Superio - Job Borad React NextJS Template",
-};
+import { companyService } from "@/services/companyService";
 
 const JobSingleDynamicV3 = ({ params }) => {
-  const id = params.id;
-  const company = jobs.find((item) => item.id == id) || jobs[0];
+  const [job, setJob] = useState(null);
+  const [industries, setIndustries] = useState([]);
+  const [levels, setLevels] = useState([]);
+  const [jobTypes, setJobTypes] = useState([]);
+  const [experienceLevels, setExperienceLevels] = useState([]);
+  const [company, setCompany] = useState(null);
 
+  useEffect(() => {
+    jobService.getJobById(params.id)
+      .then(setJob)
+      .catch(() => setJob(null));
+    jobService.getIndustries().then(setIndustries);
+    jobService.getLevel && jobService.getLevel().then(setLevels); // Nếu có hàm getLevels
+    jobService.getJobTypes().then(setJobTypes);
+    jobService.getExperienceLevels().then(setExperienceLevels);
+    jobService.getJobLevels().then(setLevels);
+  }, [params.id]);
+
+  useEffect(() => {
+    if (job?.companyId) {
+      companyService.getCompanyById(job.companyId)
+        .then(setCompany)
+        .catch(() => setCompany(null));
+    }
+  }, [job?.companyId]);
+
+  const getIndustryName = (id) => industries.find(i => i.industryId === id)?.industryName || "N/A";
+  const getLevelName = (id) => levels.find(l => l.id === id)?.levelName || "N/A";
+  const getJobTypeName = (id) => jobTypes.find(jt => jt.id === id)?.jobTypeName || "N/A";
+  const getExperienceLevelName = (id) => experienceLevels.find(el => el.id === id)?.name || "N/A";
+
+  // Build jobTypeList for tag màu (nhiều tag, mỗi tag một màu)
+  const styleClassMap = {
+    "Full-time": "fulltime-tag",
+    "Full Time": "fulltime-tag",
+    "Private": "private-tag",
+    "Urgent": "urgent-tag",
+    "Part-time": "parttime-tag"
+  };
+
+  const jobTypeList = job && jobTypes.length
+    ? jobTypes
+        .filter(jt => jt.id === job.jobTypeId)
+        .map(jt => ({
+          type: jt.jobTypeName,
+          styleClass: styleClassMap[jt.jobTypeName] || "default-tag"
+        }))
+    : [];
+
+  const levelName = job?.levelId
+    ? levels.find(l => l.id === job.levelId)?.levelName || "N/A"
+    : "N/A";
   return (
     <>
       {/* <!-- Header Span --> */}
@@ -46,37 +93,35 @@ const JobSingleDynamicV3 = ({ params }) => {
                   <div className="job-block-seven style-two">
                     <div className="inner-box">
                       <div className="content">
-                        <h4>{company?.jobTitle}</h4>
+                        <h4>{job?.title}</h4>
 
                         <ul className="job-info">
                           <li>
                             <span className="icon flaticon-briefcase"></span>
-                            {company?.company}
+                            {company?.companyName  || "N/A"}
                           </li>
-                          {/* compnay info */}
+                          {/* company info */}
                           <li>
                             <span className="icon flaticon-map-locator"></span>
-                            {company?.location}
+                            {job?.location}
                           </li>
                           {/* location info */}
                           <li>
                             <span className="icon flaticon-clock-3"></span>{" "}
-                            {company?.time}
+                            {job?.createdAt ? new Date(job.createdAt).toLocaleDateString('vi-VN') : ''}
                           </li>
                           {/* time info */}
                           <li>
                             <span className="icon flaticon-money"></span>{" "}
-                            {company?.salary}
+                            {job?.salary}
                           </li>
                           {/* salary info */}
                         </ul>
                         {/* End .job-info */}
 
                         <ul className="job-other-info">
-                          {company?.jobType?.map((val, i) => (
-                            <li key={i} className={`${val.styleClass}`}>
-                              {val.type}
-                            </li>
+                          {jobTypeList.map((val, i) => (
+                            <li key={i} className={val.styleClass}>{val.type}</li>
                           ))}
                         </ul>
                         {/* End .job-other-info */}
@@ -89,12 +134,18 @@ const JobSingleDynamicV3 = ({ params }) => {
                 {/* <!-- job block outer --> */}
 
                 <div className="job-overview-two">
-                  <h4>Job Description</h4>
-                  <JobOverView2 />
+                  <h4>Job Overview</h4>
+                  <JobOverView2
+                    job={job}
+                    industryName={getIndustryName(job?.industryId)}
+                    levelName={levelName}
+                    jobTypeName={getJobTypeName(job?.jobTypeId)}
+                    experienceLevelName={getExperienceLevelName(job?.experienceLevelId)}
+                  />
                 </div>
                 {/* <!-- job-overview-two --> */}
 
-                <JobDetailsDescriptions />
+                <JobDetailsDescriptions jobId={params.id} />
                 {/* End job-details */}
 
                 <div className="other-options">
@@ -154,33 +205,50 @@ const JobSingleDynamicV3 = ({ params }) => {
 
                   <div className="sidebar-widget company-widget">
                     <div className="widget-content">
-                      <div className="company-title">
-                        <div className="company-logo">
+                      <div
+                        className="company-title"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "16px",
+                          textAlign: "left",
+                          paddingLeft: 0,
+                        }}
+                      >
+                        {company?.urlCompanyLogo && (
                           <Image
                             width={54}
                             height={53}
-                            src={company.logo}
-                            alt="resource"
+                            src={company.urlCompanyLogo}
+                            alt={company.companyName}
+                            style={{ borderRadius: "8px", objectFit: "contain", background: "#fff" }}
                           />
+                        )}
+                        <div>
+                          <h5 className="company-name" style={{ margin: 0 }}>{company?.companyName}</h5>
+                          <a
+                            href={`/employers-single-v1/${company?.userId}`}
+                            className="profile-link"
+                          >
+                            View company profile
+                          </a>
                         </div>
-                        <h5 className="company-name">{company.company}</h5>
-                        <a href="#" className="profile-link">
-                          View company profile
-                        </a>
                       </div>
                       {/* End company title */}
 
-                      <CompnayInfo />
+                      <CompnayInfo companyId={job?.companyId} />
 
                       <div className="btn-box">
-                        <a
-                          href="#"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="theme-btn btn-style-three"
-                        >
-                          {company?.link}
-                        </a>
+                        {company?.website && (
+                          <a
+                            href={company.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="theme-btn btn-style-three"
+                          >
+                            Visit company website
+                          </a>
+                        )}
                       </div>
                       {/* End btn-box */}
                     </div>
@@ -226,6 +294,54 @@ const JobSingleDynamicV3 = ({ params }) => {
 
       <FooterDefault footerStyle="alternate5" />
       {/* <!-- End Main Footer --> */}
+
+      <style jsx global>{`
+      .fulltime-tag {
+        background: #e3f0ff;
+        color: #2a6ee0;
+        border-radius: 20px;
+        padding: 4px 16px;
+        margin-right: 8px;
+        display: inline-block;
+        font-weight: 500;
+      }
+      .private-tag {
+        background: #e6f7ec;
+        color: #1bbf83;
+        border-radius: 20px;
+        padding: 4px 16px;
+        margin-right: 8px;
+        display: inline-block;
+        font-weight: 500;
+      }
+      .urgent-tag {
+        background: #fff4e6;
+        color: #ff8c00;
+        border-radius: 20px;
+        padding: 4px 16px;
+        margin-right: 8px;
+        display: inline-block;
+        font-weight: 500;
+      }
+      .parttime-tag {
+        background: #f0f7ff;
+        color: #007bff;
+        border-radius: 20px;
+        padding: 4px 16px;
+        margin-right: 8px;
+        display: inline-block;
+        font-weight: 500;
+      }
+      .default-tag {
+        background: #f0f0f0;
+        color: #333;
+        border-radius: 20px;
+        padding: 4px 16px;
+        margin-right: 8px;
+        display: inline-block;
+        font-weight: 500;
+      }
+      `}</style>
     </>
   );
 };

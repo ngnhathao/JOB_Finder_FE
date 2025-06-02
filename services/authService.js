@@ -1,52 +1,36 @@
 import Cookies from 'js-cookie';
-
-const API_URL = 'https://localhost:7266/api';
+import ApiService from './api.service';
 
 export const authService = {
   async login(email, password) {
     try {
-      const response = await fetch(`${API_URL}/Auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Login failed');
-      }
-
-      const data = await response.json();
+      const data = await ApiService.login(email, password);
       // Lưu token và role (và tên nếu có) vào cookies
       Cookies.set('token', data.token, { expires: 7 }); // Lưu 7 ngày
       Cookies.set('role', data.role, { expires: 7 });
-      if (data.name) { // Giả định API trả về tên người dùng
+      if (data.name) {
         Cookies.set('name', data.name, { expires: 7 });
       }
-      return data; // Trả về dữ liệu để component gọi xử lý và dispatch
+      if (data.companyId) {
+        Cookies.set('companyId', data.companyId, { expires: 7 });
+      }
+      return data;
     } catch (error) {
       throw error;
     }
   },
 
-  async register(email, password, role) {
+  async register(fullName, email, phone, password) {
     try {
-      const response = await fetch(`${API_URL}/Auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password, role }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Registration failed');
-      }
-
-      const data = await response.json();
+      const userData = {
+        fullName,
+        email,
+        phone,
+        password,
+        role: '1' // Set default role as user
+      };
+      const data = await ApiService.register(userData);
+      console.log('Registration successful:', data);
       return data;
     } catch (error) {
       throw error;
@@ -54,9 +38,15 @@ export const authService = {
   },
 
   logout() {
-    Cookies.remove('token');
-    Cookies.remove('role');
-    Cookies.remove('name'); // Xóa tên khỏi cookie khi logout
+    Cookies.remove('token', { path: '/' });
+    Cookies.remove('role', { path: '/' });
+    Cookies.remove('name', { path: '/' });
+    Cookies.remove('token', { path: '/', domain: 'localhost' });
+    Cookies.remove('role', { path: '/', domain: 'localhost' });
+    Cookies.remove('name', { path: '/', domain: 'localhost' });
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    localStorage.removeItem('name');
   },
 
   getToken() {
@@ -69,6 +59,10 @@ export const authService = {
 
   getName() {
     return Cookies.get('name');
+  },
+
+  getCompanyId() {
+    return Cookies.get('companyId');
   },
 
   isAuthenticated() {

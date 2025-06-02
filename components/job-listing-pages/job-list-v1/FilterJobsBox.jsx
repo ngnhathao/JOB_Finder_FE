@@ -1,5 +1,6 @@
 'use client'
 
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -24,12 +25,21 @@ import {
 import Image from "next/image";
 import { jobService } from "../../../services/jobService";
 
+
 const FilterJobsBox = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [totalJobs, setTotalJobs] = useState(0);
   const [displayCount, setDisplayCount] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Thêm state để lưu dữ liệu lookup
+  const [companies, setCompanies] = useState([]);
+  const [jobTypesData, setJobTypesData] = useState([]);
+  const [experienceLevels, setExperienceLevels] = useState([]);
+  const [industries, setIndustries] = useState([]);
 
   const { jobList, jobSort } = useSelector((state) => state.filter);
   const {
@@ -44,185 +54,263 @@ const FilterJobsBox = () => {
     tag,
   } = jobList || {};
 
-  const { sort, perPage } = jobSort;
+  const { sort } = jobSort;
   const dispatch = useDispatch();
 
-  // Fetch jobs khi filters thay đổi
+  // Fetch jobs khi filters hoặc pagination thay đổi
   useEffect(() => {
+    console.log('useEffect in FilterJobsBox triggered');
+    // Fetch dữ liệu lookup khi component mount
+    const fetchLookupData = async () => {
+      try {
+        // Fetch từng loại dữ liệu lookup độc lập để xử lý lỗi riêng
+        const companiesRes = await jobService.getCompanies().catch(err => {
+          console.error('Failed to fetch companies data', err);
+          return []; // Trả về mảng rỗng nếu fetch thất bại
+        });
+        const jobTypesRes = await jobService.getJobTypes().catch(err => {
+          console.error('Failed to fetch job types data', err);
+          return []; // Trả về mảng rỗng nếu fetch thất bại
+        });
+        const expLevelsRes = await jobService.getExperienceLevels().catch(err => {
+          console.error('Failed to fetch experience levels data', err);
+          return []; // Trả về mảng rỗng nếu fetch thất bại
+        });
+        const industriesRes = await jobService.getIndustries().catch(err => {
+          console.error('Failed to fetch industries data', err);
+          return []; // Trả về mảng rỗng nếu fetch thất bại
+        });
+
+        setCompanies(companiesRes);
+        setJobTypesData(jobTypesRes);
+        setExperienceLevels(expLevelsRes);
+        setIndustries(industriesRes);
+        console.log('Lookup data fetched', { companiesRes, jobTypesRes, expLevelsRes, industriesRes });
+      } catch (err) {
+        // Catch block này có thể không cần thiết nữa nếu các catch riêng lẻ hoạt động
+        console.error('An unexpected error occurred during lookup data fetching', err);
+      }
+    };
+    fetchLookupData();
+
+    // Logic fetch jobs (giữ nguyên)
     const fetchJobs = async () => {
       try {
         setLoading(true);
-        const filters = {
-          keyword,
-          location,
-          destination,
-          category,
-          jobType,
-          datePosted,
-          experience,
-          salary,
-          tag,
-          sort,
-          page: Math.floor(perPage.start / perPage.end) + 1,
-          limit: perPage.end || 10
-        };
+        const filters = {};
 
+        if (keyword !== "") filters.keyword = keyword;
+        if (location !== "") filters.location = location;
+        if (destination?.min !== 0 || destination?.max !== 100) filters.destination = destination;
+        if (salary?.min !== 0 || salary?.max !== 20000) filters.salary = salary;
+        if (category !== "") filters.category = category;
+        if (jobType?.length > 0) filters.jobType = jobType;
+        if (datePosted !== "" && datePosted !== "all") filters.datePosted = datePosted;
+        if (experience?.length > 0) filters.experience = experience;
+        if (tag !== "") filters.tag = tag;
+        if (sort !== "") filters.sort = sort;
+
+        filters.page = currentPage;
+        filters.limit = itemsPerPage;
+
+        console.log('Fetching jobs with filters:', filters);
         const response = await jobService.getJobs(filters);
+        console.log('Jobs fetch response:', response);
         setJobs(response.data);
         setTotalJobs(response.total);
         setError(null);
       } catch (err) {
+        console.error('Error in fetchJobs:', err);
         setError('Failed to fetch jobs');
         console.error(err);
-      } finally {
+        setJobs([]);
+        setTotalJobs(0);
+      } finally { 
         setLoading(false);
       }
     };
 
+
     fetchJobs();
-  }, [keyword, location, destination, category, jobType, datePosted, experience, salary, tag, sort, perPage]);
+  }, [keyword, location, destination, category, jobType, datePosted, experience, salary, tag, sort, currentPage, itemsPerPage]);
+
+  // Helper function để tìm tên từ ID trong dữ liệu lookup
+  const getCompanyName = (companyId) => {
+      const company = companies.find(c => c.id === companyId);
+      return company ? company.name : 'N/A';
+  };
+
+  const getJobTypeName = (jobTypeId) => {
+      const type = jobTypesData.find(jt => jt.id === jobTypeId);
+      // Dữ liệu API JobType có trường jobTypeName
+      return type ? type.jobTypeName : 'N/A';
+  };
+
+  const getIndustryName = (industryId) => {
+      const industry = industries.find(i => i.industryId === industryId);
+      // Dữ liệu API Industry có trường industryName
+      return industry ? industry.industryName : 'N/A';
+  };
+
+  const getExperienceLevelName = (expLevelId) => {
+      const level = experienceLevels.find(el => el.id === expLevelId);
+       // Dữ liệu API ExperienceLevels có trường name
+      return level ? level.name : 'N/A';
+  };
 
   // keyword filter on title
   const keywordFilter = (item) =>
-    keyword !== ""
-      ? item.jobTitle.toLocaleLowerCase().includes(keyword.toLocaleLowerCase())
-      : item;
+    keyword ? item.title.toLowerCase().includes(keyword.toLowerCase()) : true;
+
 
   // location filter
   const locationFilter = (item) =>
-    location !== ""
-      ? item?.location
-          ?.toLocaleLowerCase()
-          .includes(location?.toLocaleLowerCase())
-      : item;
+    location ? item?.industryId?.toLowerCase().includes(location.toLowerCase()) : true;
 
-  // location filter
+
+  // destination filter
   const destinationFilter = (item) =>
-    item?.destination?.min >= destination?.min &&
-    item?.destination?.max <= destination?.max;
+    destination?.min === 0 && destination?.max === 100 ? true :
+    item?.destination?.min >= destination?.min && item?.destination?.max <= destination?.max;
+
 
   // category filter
   const categoryFilter = (item) =>
-    category !== ""
-      ? item?.category?.toLocaleLowerCase() === category?.toLocaleLowerCase()
-      : item;
+    category ? item?.industryId?.toLowerCase() === category.toLowerCase() : true;
+
 
   // job-type filter
   const jobTypeFilter = (item) =>
-    jobType?.length !== 0 && item?.jobType !== undefined
-      ? jobType?.includes(
-          item?.jobType[0]?.type.toLocaleLowerCase().split(" ").join("-")
-        )
-      : item;
+    jobType?.length ? jobType.includes(item.jobTypeId) : true;
+
 
   // date-posted filter
   const datePostedFilter = (item) =>
-    datePosted !== "all" && datePosted !== ""
-      ? item?.created_at
-          ?.toLocaleLowerCase()
-          .split(" ")
-          .join("-")
-          .includes(datePosted)
-      : item;
+    datePosted && datePosted !== "all" ?
+    item?.createdAt?.toLowerCase().split(" ").join("-").includes(datePosted) : true;
+
 
   // experience level filter
   const experienceFilter = (item) =>
-    experience?.length !== 0
-      ? experience?.includes(
-          item?.experience?.split(" ").join("-").toLocaleLowerCase()
-        )
-      : item;
+    experience?.length ? experience.includes(item.experienceId) : true;
+
 
   // salary filter
   const salaryFilter = (item) =>
-    item?.totalSalary?.min >= salary?.min &&
-    item?.totalSalary?.max <= salary?.max;
+    salary?.min === 0 && salary?.max === 20000 ? true :
+    item.salary >= salary?.min && item.salary <= salary?.max;
+
 
   // tag filter
-  const tagFilter = (item) => (tag !== "" ? item?.tag === tag : item);
+  const tagFilter = (item) => tag ? item?.industryId === tag : true;
+
 
   // sort filter
   const sortFilter = (a, b) =>
-    sort === "des" ? a.id > b.id && -1 : a.id < b.id && -1;
+    sort === "CreatedAtDesc" ? a.id > b.id && -1 : a.id < b.id && -1;
 
   // Thêm handler cho nút Show More
   const handleShowMore = () => {
+    // Tăng số lượng hiển thị, kích hoạt fetch data mới
     setDisplayCount(prev => prev + 10);
   };
 
+
   let content = jobs
-    ?.filter(keywordFilter)
-    ?.filter(locationFilter)
-    ?.filter(destinationFilter)
-    ?.filter(categoryFilter)
-    ?.filter(jobTypeFilter)
-    ?.filter(datePostedFilter)
-    ?.filter(experienceFilter)
-    ?.filter(salaryFilter)
-    ?.filter(tagFilter)
-    ?.sort(sortFilter)
-    .slice(0, displayCount)
     ?.map((item) => (
-      <div className="job-block" key={item.id}>
+      <div className="job-block" key={item.jobId}>
         <div className="inner-box">
           <div className="content">
-            <span className="company-logo">
-              <Image width={50} height={49} src={item.logo} alt="item brand" />
-            </span>
-            <h4>
-              <Link href={`/job-single-v1/${item.id}`}>{item.jobTitle}</Link>
-            </h4>
+            {/* Restored Company Logo */}
+             <span className="company-logo">
+               {/* Sử dụng item.logo từ API cho ảnh công ty */}
+               {item.logo ? (
+                 <Image width={50} height={49} src={item.logo} alt={getCompanyName(item.companyId)} />
+               ) : (
+                 <Image width={50} height={49} src={'/images/company-logo/default-logo.png'} alt={getCompanyName(item.companyId)} />
+               )}
+             </span>
+            {/* Restored Job Title */}
+             <h4>
+               <Link href={`/job-single-v3/${item.id}`}>{item.jobTitle}</Link>
+             </h4>
 
             <ul className="job-info">
-              <li>
-                <span className="icon flaticon-briefcase"></span>
-                {item.company}
-              </li>
-              {/* compnay info */}
+              {/* Removed Industry from job-info */}
+              {/* Hiển thị Industry với icon cặp xách */}
+              {/* {item.industryId ? (
+                 <li>
+                     <span className="icon flaticon-briefcase"></span>
+                     {getIndustryName(item.industryId)}
+                 </li>
+               ) : null} */}
+              {/* Add Company Name here */}
+              {item.companyId ? (
+                <li>
+                  <span className="icon flaticon-building"></span>{/* Use building icon if available */}
+                  {getCompanyName(item.companyId)}
+                </li>
+              ) : null}
               <li>
                 <span className="icon flaticon-map-locator"></span>
-                {item.location}
+                {/* Chỉ hiển thị ProvinceName */}
+                {console.log('Item provinceName:', item.provinceName)}
+                {item.provinceName || 'Province N/A'}
               </li>
-              {/* location info */}
+              {/* Removed Date Posted */}
+              {/* Kept only salary */}
               <li>
-                <span className="icon flaticon-clock-3"></span> {item.time}
+                <span className="icon flaticon-money"></span>
+                 {item.salary || 'Salary N/A'} {/* Giữ lại Salary */}
               </li>
-              {/* time info */}
-              <li>
-                <span className="icon flaticon-money"></span> {item.salary}
-              </li>
-              {/* salary info */}
             </ul>
-            {/* End .job-info */}
 
-            <ul className="job-other-info">
-              {item?.jobType?.map((val, i) => (
-                <li key={i} className={`${val.styleClass}`}>
-                  {val.type}
-                </li>
-              ))}
-            </ul>
-            {/* End .job-other-info */}
+            {/* Restored Job Type, Experience Level, other tags */}
+             <ul className="job-other-info">
+               {/* Hiển thị Industry tag */}
+               {item.industryId ? (
+                 <li className="time">{getIndustryName(item.industryId)}</li>
+               ) : null}
+               {/* Hiển thị Job Type tag */}
+               {item.jobTypeId ? (
+                  <li className="time">{getJobTypeName(item.jobTypeId)}</li>
+               ) : null}
+                {/* Hiển thị Experience Level tag */}
+               {item.experienceLevelId ? (
+                 <li className="urgent">{getExperienceLevelName(item.experienceLevelId)}</li>
+                ) : null}
+                {/* Removed other placeholder tags */}
 
-            <button className="bookmark-btn">
-              <span className="flaticon-bookmark"></span>
-            </button>
+             </ul>
+
+            {/* Restored Bookmark button */}
+             <button className="bookmark-btn">
+               <span className="flaticon-bookmark"></span>
+             </button>
+
           </div>
         </div>
       </div>
-      // End all jobs
     ));
+
 
   // sort handler
   const sortHandler = (e) => {
     dispatch(addSort(e.target.value));
+    setCurrentPage(1);
   };
+
 
   // per page handler
   const perPageHandler = (e) => {
-    const pageData = JSON.parse(e.target.value);
-    dispatch(addPerPage(pageData));
+    const limit = Number(e.target.value);
+    setItemsPerPage(limit);
+    setCurrentPage(1);
   };
+
+  // Điều chỉnh logic phân trang hiển thị
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + jobs.length;
 
   // clear all filters
   const clearAll = () => {
@@ -239,16 +327,20 @@ const FilterJobsBox = () => {
     dispatch(addSalary({ min: 0, max: 20000 }));
     dispatch(addTag(""));
     dispatch(addSort(""));
-    dispatch(addPerPage({ start: 0, end: 0 }));
+    setCurrentPage(1);
+    setItemsPerPage(10);
+    setDisplayCount(10);
   };
 
   if (loading) {
     return <div className="text-center py-5">Loading...</div>;
   }
 
+
   if (error) {
     return <div className="text-center py-5 text-danger">{error}</div>;
   }
+
 
   return (
     <>
@@ -266,11 +358,13 @@ const FilterJobsBox = () => {
           </div>
           {/* Collapsible sidebar button */}
 
+
           <div className="text">
             Show <strong>{jobs?.length}</strong> of <strong>{totalJobs}</strong> jobs
           </div>
         </div>
         {/* End show-result */}
+
 
         <div className="sort-by">
           {keyword !== "" ||
@@ -285,8 +379,8 @@ const FilterJobsBox = () => {
           salary?.max !== 20000 ||
           tag !== "" ||
           sort !== "" ||
-          perPage.start !== 0 ||
-          perPage.end !== 0 ? (
+          currentPage !== 1 ||
+          itemsPerPage !== 10 ? (
             <button
               onClick={clearAll}
               className="btn btn-danger text-nowrap me-2"
@@ -296,26 +390,28 @@ const FilterJobsBox = () => {
             </button>
           ) : undefined}
 
+
           <select
             value={sort}
             className="chosen-single form-select"
             onChange={sortHandler}
           >
             <option value="">Sort by (default)</option>
-            <option value="asc">Newest</option>
-            <option value="des">Oldest</option>
+            <option value="CreatedAtAsc">Newest</option>
+            <option value="CreatedAtDesc">Oldest</option>
           </select>
           {/* End select */}
+
 
           <select
             onChange={perPageHandler}
             className="chosen-single form-select ms-3"
-            value={JSON.stringify(perPage)}
+            value={itemsPerPage}
           >
-            <option value={JSON.stringify({ start: 0, end: 0 })}>All</option>
-            <option value={JSON.stringify({ start: 0, end: 10 })}>10 per page</option>
-            <option value={JSON.stringify({ start: 0, end: 20 })}>20 per page</option>
-            <option value={JSON.stringify({ start: 0, end: 30 })}>30 per page</option>
+            <option value={10}>10 per page</option>
+            <option value={20}>20 per page</option>
+            <option value={30}>30 per page</option>
+            <option value={totalJobs}>All</option>
           </select>
           {/* End select */}
         </div>
@@ -323,27 +419,16 @@ const FilterJobsBox = () => {
       {/* End top filter bar box */}
       {content}
       {/* <!-- List Show More --> */}
-      {jobs.length > 0 && (
-        <div className="ls-show-more">
-          <p>Show {displayCount} of {totalJobs} Jobs</p>
-          <div className="bar">
-            <span 
-              className="bar-inner" 
-              style={{ width: `${(displayCount / totalJobs) * 100}%` }}
-            ></span>
-          </div>
-          {displayCount < totalJobs && (
-            <button 
-              className="show-more"
-              onClick={handleShowMore}
-            >
+      {jobs.length < totalJobs && !loading && (
+        <div className="btn-box mt-4 text-center">
+           <button className="theme-btn btn-style-one" onClick={handleShowMore}>
               Show More
-            </button>
-          )}
+           </button>
         </div>
       )}
     </>
   );
 };
+
 
 export default FilterJobsBox;

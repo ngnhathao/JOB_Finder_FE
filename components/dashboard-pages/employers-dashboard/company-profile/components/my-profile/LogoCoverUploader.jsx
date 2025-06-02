@@ -1,20 +1,28 @@
-
 'use client'
 
 import { useState } from "react";
+import Image from "next/image";
 
-const LogoCoverUploader = () => {
+const LogoCoverUploader = ({ onLogoChange, onCoverChange, logoPreviewUrl, coverPreviewUrl, initialLogoUrl, initialCoverUrl, isEditing }) => {
     const [logoImg, setLogoImg] = useState("");
     const [converImg, setCoverImg] = useState("");
 
     // logo image
-    const logoHandler = (file) => {
+    const logoHandler = (e) => {
+        const file = e.target.files[0];
         setLogoImg(file);
+        if(onLogoChange) {
+            onLogoChange(file);
+        }
     };
 
     // cover image
-    const coverHandler = (file) => {
+    const coverHandler = (e) => {
+        const file = e.target.files[0];
         setCoverImg(file);
+        if(onCoverChange) {
+            onCoverChange(file);
+        }
     };
 
     return (
@@ -24,19 +32,40 @@ const LogoCoverUploader = () => {
                     <input
                         className="uploadButton-input"
                         type="file"
-                        name="attachments[]"
+                        name="logoFile"
                         accept="image/*"
                         id="upload"
-                        required
-                        onChange={(e) => logoHandler(e.target.files[0])}
+                        onChange={logoHandler}
+                        disabled={!isEditing}
                     />
                     <label
                         className="uploadButton-button ripple-effect"
                         htmlFor="upload"
+                        style={{ width: '100px', height: '100px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}
                     >
-                        {logoImg !== "" ? logoImg?.name : " Browse Logo"}
+                        {logoPreviewUrl ? (
+                            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                                <Image
+                                    src={logoPreviewUrl}
+                                    alt="Logo Preview"
+                                    fill
+                                    style={{ objectFit: 'contain' }}
+                                />
+                            </div>
+                        ) : initialLogoUrl ? (
+                             <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                                 <Image
+                                     src={initialLogoUrl}
+                                     alt="Existing Logo"
+                                     fill
+                                     style={{ objectFit: 'contain' }}
+                                 />
+                             </div>
+                        ) : (
+                            logoImg !== "" ? logoImg?.name : " Browse Logo"
+                        )}
                     </label>
-                    <span className="uploadButton-file-name"></span>
+                    {!logoPreviewUrl && logoImg !== "" && <span className="uploadButton-file-name">{logoImg?.name}</span>}
                 </div>
                 <div className="text">
                     Max file size is 1MB, Minimum dimension: 330x300 And
@@ -49,18 +78,40 @@ const LogoCoverUploader = () => {
                     <input
                         className="uploadButton-input"
                         type="file"
-                        name="attachments[]"
+                        name="logoLgrFile"
                         accept="image/*, application/pdf"
                         id="upload_cover"
-                        onChange={(e) => coverHandler(e.target.files[0])}
+                        onChange={coverHandler}
+                        disabled={!isEditing}
                     />
                     <label
                         className="uploadButton-button ripple-effect"
                         htmlFor="upload_cover"
+                        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}
                     >
-                        {converImg !== "" ? converImg?.name : "Browse Cover"}
+                        {coverPreviewUrl ? (
+                            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                                <Image
+                                    src={coverPreviewUrl}
+                                    alt="Cover Preview"
+                                    fill
+                                    style={{ objectFit: 'contain' }}
+                                />
+                            </div>
+                        ) : initialCoverUrl ? (
+                            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                                <Image
+                                    src={initialCoverUrl}
+                                    alt="Existing Cover"
+                                    fill
+                                    style={{ objectFit: 'contain' }}
+                                />
+                            </div>
+                        ) : (
+                            converImg !== "" ? converImg?.name : "Browse Cover"
+                        )}
                     </label>
-                    <span className="uploadButton-file-name"></span>
+                    {!coverPreviewUrl && converImg !== "" && <span className="uploadButton-file-name">{converImg?.name}</span>}
                 </div>
                 <div className="text">
                     Max file size is 1MB, Minimum dimension: 330x300 And

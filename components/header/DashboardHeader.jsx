@@ -7,12 +7,46 @@ import employerMenuData from "../../data/employerMenuData";
 import HeaderNavContent from "./HeaderNavContent";
 import { isActiveLink } from "../../utils/linkActiveChecker";
 import { usePathname } from "next/navigation";
+import { useSelector } from "react-redux";
 
 
 const DashboardHeader = () => {
     const [navbar, setNavbar] = useState(false);
 
+    // Get user data from Redux store
+    const user = useSelector((state) => state.auth.user);
 
+    // Use state for user info to handle updates
+    const [displayUserName, setDisplayUserName] = useState("My Account");
+    const [displayAvatar, setDisplayAvatar] = useState("/images/resource/company-6.png");
+
+    // Update state when user data from Redux changes
+    useEffect(() => {
+        // First, try to get user from Redux
+        if (user) {
+            console.log('DashboardHeader: Using user from Redux', user);
+            setDisplayUserName(user.fullName || user.name || "My Account");
+            setDisplayAvatar(user.avatar || user.image || "/images/resource/company-6.png");
+        } else if (typeof window !== 'undefined') { // If not in Redux, try localStorage
+            const userString = localStorage.getItem('user');
+            if (userString) {
+                try {
+                    const userObj = JSON.parse(userString);
+                    console.log('DashboardHeader: Using user from localStorage', userObj);
+                    setDisplayUserName(userObj.fullName || userObj.name || "My Account");
+                    setDisplayAvatar(userObj.avatar || userObj.image || "/images/resource/company-6.png");
+                } catch (e) {
+                    console.error('DashboardHeader: Failed to parse user from localStorage', e);
+                    setDisplayUserName("My Account");
+                    setDisplayAvatar("/images/resource/company-6.png");
+                }
+            } else {
+                 console.log('DashboardHeader: No user found in Redux or localStorage');
+                 setDisplayUserName("My Account");
+                 setDisplayAvatar("/images/resource/company-6.png");
+            }
+        }
+    }, [user]); // Depend on user from Redux
 
     const changeBackground = () => {
         if (window.scrollY >= 0) {
@@ -42,11 +76,11 @@ const DashboardHeader = () => {
                             <div className="logo">
                                 <Link href="/">
                                     <Image
-                                        alt="brand"
-                                        src="/images/logo.svg"
+                                        alt="JobFinder logo"
+                                        src="/images/jobfinder-logo.png"
                                         width={154}
                                         height={50}
-                                        priority
+                                        title="JobFinder"
                                     />
                                 </Link>
                             </div>
@@ -81,11 +115,11 @@ const DashboardHeader = () => {
                                 <Image
                                     alt="avatar"
                                     className="thumb"
-                                    src="/images/resource/company-6.png"
+                                    src={displayAvatar}
                                     width={50}
                                     height={50}
                                 />
-                                <span className="name">My Account</span>
+                                <span className="name">{displayUserName}</span>
                             </a>
 
                             <ul className="dropdown-menu">

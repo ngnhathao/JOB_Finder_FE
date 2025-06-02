@@ -467,7 +467,30 @@ const PostBoxForm = () => {
             <p>Post job successfully!</p>
             <button
               className="theme-btn btn-style-one"
-              onClick={() => window.location.reload()}
+              onClick={(e) => {
+                e.preventDefault();
+                setShowSuccessModal(false);
+                setErrors({});
+                setFormData({
+                  jobId: 0,
+                  title: '',
+                  description: '',
+                  companyId: 0,
+                  salary: "",
+                  industryId: 0,
+                  expiryDate: '',
+                  levelId: 0,
+                  jobTypeId: 0,
+                  experienceLevelId: 0,
+                  timeStart: '',
+                  timeEnd: '',
+                  status: 0,
+                  provinceName: '',
+                  addressDetail: '',
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
+                });
+              }}
             >
               Close
             </button>
@@ -501,10 +524,15 @@ const PostBoxForm = () => {
           border-color: #dc3545 !important;
         }
         .error-message {
+          background: none !important;
+          padding: 0 !important;
           color: #dc3545;
           font-size: 12px;
           margin-top: 5px;
           display: block;
+          border: none !important;
+          box-shadow: none !important;
+          text-align: left;
         }
         input[type="date"] {
           cursor: pointer;

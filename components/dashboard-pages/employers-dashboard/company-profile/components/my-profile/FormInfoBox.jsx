@@ -5,6 +5,7 @@ import Select from "react-select";
 import axios from 'axios';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import { industryService } from "@/services/industryService";
 
 const FormInfoBox = ({ onFormChange, validationErrors, initialData, isEditing }) => {
     const [formData, setFormData] = useState({
@@ -35,13 +36,12 @@ const FormInfoBox = ({ onFormChange, validationErrors, initialData, isEditing })
     }, []); // Empty dependency array means this effect runs once on mount
 
     // Fetch industries on component mount
-     useEffect(() => {
+    useEffect(() => {
         const fetchIndustries = async () => {
             try {
-                // TODO: Use your actual API base URL instead of hardcoded localhost
-                const response = await axios.get('https://localhost:7266/api/Industry');
+                const response = await industryService.getAll();
                 // Sort industries alphabetically by name
-                const sortedIndustries = response.data.sort((a, b) => a.industryName.localeCompare(b.industryName));
+                const sortedIndustries = response.sort((a, b) => a.industryName.localeCompare(b.industryName));
                 setIndustries(sortedIndustries);
             } catch (error) {
                 console.error("Error fetching industries:", error);

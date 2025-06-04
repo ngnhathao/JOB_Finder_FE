@@ -59,18 +59,34 @@ class ApiServiceClass {
     if (jobData instanceof FormData) {
       options = {
         method: 'POST',
-        body: jobData
-        // KHÔNG set Content-Type, browser sẽ tự động set boundary cho multipart/form-data
+        body: jobData,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+        // Don't set Content-Type for FormData, browser will set it automatically with boundary
       };
     } else {
-      options = API_CONFIG.getRequestOptions('POST', jobData);
+      options = {
+        ...API_CONFIG.getRequestOptions('POST', jobData),
+        headers: {
+          ...API_CONFIG.getRequestOptions('POST', jobData).headers,
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      };
     }
-    const response = await fetch(url, options);
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `HTTP error! status: ${response.status}`);
+    
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Job creation error:', errorData);
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    } catch (error) {
+      console.error('Job creation exception:', error);
+      throw error;
     }
-    return response.json();
   }
 
   // Company APIs

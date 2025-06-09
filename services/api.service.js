@@ -112,8 +112,32 @@ class ApiServiceClass {
   // Generic method để xử lý các API calls khác
   static async request(endpoint, method = 'GET', data = null, params = null) {
     const url = API_CONFIG.getUrlWithParams(endpoint, params);
-    const options = API_CONFIG.getRequestOptions(method, data);
-    return API_CONFIG.handleResponse(await fetch(url, options));
+    const token = localStorage.getItem('token');
+    const options = {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      credentials: 'include'
+    };
+
+    if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+      options.body = JSON.stringify(data);
+    }
+
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    } catch (error) {
+      console.error('API request error:', error);
+      throw error;
+    }
   }
 
   static async getCompanyProfileById(id) {

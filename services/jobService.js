@@ -390,7 +390,7 @@ export const jobService = {
       formData.append('ExperienceLevelId', parseInt(jobData.experienceLevelId));
       formData.append('TimeStart', new Date(jobData.timeStart).toISOString());
       formData.append('TimeEnd', new Date(jobData.timeEnd).toISOString());
-      formData.append('Status', parseInt(jobData.status === 'Active' ? 1 : 0));
+      formData.append('Status', jobData.status);
       formData.append('ProvinceName', jobData.provinceName);
       formData.append('AddressDetail', jobData.addressDetail);
 

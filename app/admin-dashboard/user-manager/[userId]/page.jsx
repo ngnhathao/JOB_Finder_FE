@@ -6,12 +6,17 @@ import DashboardAdminSidebar from "@/components/header/DashboardAdminSidebar";
 import BreadCrumb from "@/components/dashboard-pages/BreadCrumb";
 import Image from "next/image";
 import ApiService from "@/services/api.service";
+import { Modal, Button } from "antd";
 
 const UserDetailPage = () => {
   const params = useParams();
   const userId = params.userId;
+  const userIdInt = Number(userId);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -83,9 +88,101 @@ const UserDetailPage = () => {
                   {fakeUser.cvUrl && (
                     <a className="theme-btn btn-style-one" href={fakeUser.cvUrl} target="_blank" rel="noopener noreferrer">Download CV</a>
                   )}
-                  <button className="bookmark-btn">
-                    <i className="flaticon-bookmark"></i>
-                  </button>
+                  {fakeUser.role === 'Candidate' && (
+                    <>
+                      <button
+                        className="theme-btn btn-style-one"
+                        style={{marginLeft: 8}}
+                        onClick={() => setConfirmModalOpen(true)}
+                      >
+                        Set user to recruiter
+                      </button>
+                      <Modal
+                        open={confirmModalOpen}
+                        onCancel={() => setConfirmModalOpen(false)}
+                        confirmLoading={confirmLoading}
+                        okText="Yes"
+                        cancelText="No"
+                        styles={{body: { textAlign: 'center', padding: '32px 24px 16px 24px' }}}
+                        title={null}
+                        footer={
+                          <div style={{ display: 'flex', justifyContent: 'center', gap: 16 }}>
+                            <Button
+                              onClick={() => setConfirmModalOpen(false)}
+                              style={{ minWidth: 64, borderColor: '#d9d9d9' }}
+                              _hover={{ backgroundColor: '#1967d2', color: '#fff', borderColor: '#1967d2' }}
+                            >No</Button>
+                            <Button
+                              type="primary"
+                              loading={confirmLoading}
+                              onClick={async () => {
+                                setConfirmLoading(true);
+                                try {
+                                  console.log(`Calling verify API for userId: ${userIdInt}`);
+                                  const token = localStorage.getItem('token');
+                                  const headers = {};
+                                  if (token) {
+                                    headers['Authorization'] = `Bearer ${token}`;
+                                  }
+                                  
+                                  const response = await fetch(`https://localhost:7266/api/CandidateToCompany/verify/${userIdInt}`, {
+                                    method: 'POST',
+                                    headers: headers,
+                                  });
+                                  console.log('Verify API response status:', response.status);
+                                  const responseData = await response.text();
+                                  console.log('Verify API response data:', responseData);
+
+                                  if (!response.ok) {
+                                    throw new Error(`API call failed with status ${response.status}: ${responseData}`);
+                                  }
+
+                                  setConfirmModalOpen(false);
+                                  setSuccessModalOpen(true);
+                                } catch (err) {
+                                  console.error('Error setting user to recruiter:', err);
+                                  setConfirmModalOpen(false);
+                                  Modal.error({
+                                    title: 'Error',
+                                    content: 'this candidate does not have request to become a recruiter',
+                                  });
+                                } finally {
+                                  setConfirmLoading(false);
+                                }
+                              }}
+                              style={{ minWidth: 64, _hover: { backgroundColor: '#0c4b8e', borderColor: '#0c4b8e' } }}
+                            >Yes</Button>
+                          </div>
+                        }
+                      >
+                        <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 24, color: '#222' }}>
+                          Are you sure to set this user become an recruiter?
+                        </div>
+                      </Modal>
+                      <Modal
+                        open={successModalOpen}
+                        onCancel={() => setSuccessModalOpen(false)}
+                        footer={[
+                          <Button
+                            key="ok"
+                            type="primary"
+                            onClick={async () => {
+                              setSuccessModalOpen(false);
+                              window.location.reload();
+                            }}
+                            style={{ minWidth: 80, padding: '4px 0', fontSize: 15, height: 32 }}
+                          >
+                            OK
+                          </Button>
+                        ]}
+                        title={null}
+                      >
+                        <div style={{textAlign: 'center', padding: '32px 0', fontSize: 18, color: '#1967d2', fontWeight: 600}}>
+                          Set user to recruiter successfully!
+                        </div>
+                      </Modal>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

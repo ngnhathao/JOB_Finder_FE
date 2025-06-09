@@ -11,6 +11,7 @@ import {
   addLocation,
   addPerPage,
   addSort,
+  addCompanySize,
 } from "../../../features/filter/employerFilterSlice";
 import Image from "next/image";
 import { useState, useEffect } from "react";
@@ -61,8 +62,8 @@ const FilterTopBox = () => {
         if (keyword) params.append("CompanyName", keyword);
         if (location) params.append("Location", location);
         // Add other filters if supported by the API, based on your FilterSidebar state/components
-        if (industry && industry !== "") params.append("IndustryId", industry); // Giả định API nhận IndustryId
-        if (companySize && companySize !== "") params.append("CompanySize", companySize); // Giả định API nhận CompanySize
+        if (industry && industry !== "") params.append("IndustryId", industry);
+        if (companySize && companySize !== "") params.append("TeamSize", companySize); // Changed from CompanySize to TeamSize
 
         // Add pagination parameters (assuming API supports page and limit)
         const page = Math.floor(perPage.start / (perPage.end - perPage.start + 1)) + 1; // Calculate page number
@@ -159,17 +160,9 @@ const FilterTopBox = () => {
   // company size filter (frontend filter)
   const companySizeFilter = (item) => {
     if (!companySize || companySize === "") return true; // No filter applied
-    // Assuming item.teamSize is a number or string like "11-50"
-    // You might need to adjust this logic based on the exact format of company.teamSize from your API
-    if (companySize.includes('+')) {
-      const minSize = parseInt(companySize.replace('+', ''), 10);
-      return (item?.teamSize && item.teamSize >= minSize);
-    } else if (companySize.includes('-')) {
-      const [minSize, maxSize] = companySize.split('-').map(Number);
-      // Assuming item.teamSize is a number. If it's a range string, more complex parsing is needed.
-      return (item?.teamSize && item.teamSize >= minSize && item.teamSize <= maxSize);
-    }
-    return true; // Should not reach here with current options
+    
+    // Compare exact string match since we're using predefined ranges
+    return item?.teamSize === companySize;
   };
 
   // foundation date filter (keeping frontend filter for now)
@@ -235,7 +228,7 @@ const FilterTopBox = () => {
                   />
                 </span>
                 <div className="company-info-block"> {/* Keeping company-info-block div */}
-                 <h4 style={{ margin: 0 }}>
+                 <h4 style={{ margin: 0, textAlign: 'left' }}>
    <Link
      href={`/employers-single-v1/${company.userId}`}
      style={{
@@ -298,6 +291,7 @@ const FilterTopBox = () => {
     dispatch(addIndustry(""));
     dispatch(addSort(""));
     dispatch(addPerPage({ start: 0, end: 0 }));
+    dispatch(addCompanySize(""));
   };
 
   return (

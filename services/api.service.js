@@ -82,7 +82,7 @@ class ApiServiceClass {
 
   static async verifyCompany(id) {
     const url = API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.COMPANY.VERIFY(id));
-    const options = API_CONFIG.getRequestOptions('PATCH');
+    const options = API_CONFIG.getRequestOptions('PUT');
     return API_CONFIG.handleResponse(await fetch(url, options));
   }
 

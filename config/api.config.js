@@ -57,7 +57,7 @@ const API_CONFIG = {
     COMPANY: {
       BASE: 'CompanyProfile',
       PROFILE: (id) => `companies/${id}/profile`,
-      VERIFY: (id) => `companies/${id}/verify`,
+      VERIFY: (id) => `CompanyProfile/${id}/verify`,
       LOCK: (id) => `companies/${id}/lock`,
       UNLOCK: (id) => `companies/${id}/unlock`,
       JOBS: (id) => `companies/${id}/jobs`,

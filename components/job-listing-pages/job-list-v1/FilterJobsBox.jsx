@@ -98,7 +98,7 @@ const FilterJobsBox = () => {
       try {
         setLoading(true);
         const filters = {
-          status: 'active',
+          status: 1, // Chỉ lấy job đã được approve
           ...(keyword !== "" && { keyword }),
           ...(location !== "" && { location }),
           ...(destination?.min !== 0 || destination?.max !== 100) && { destination },
@@ -128,7 +128,6 @@ const FilterJobsBox = () => {
         setLoading(false);
       }
     };
-
 
     fetchJobs();
   }, [keyword, location, destination, category, jobType, datePosted, experience, salary, tag, sort, currentPage, itemsPerPage]);
@@ -216,7 +215,7 @@ const FilterJobsBox = () => {
 
 
   let content = jobs
-    ?.filter(item => item.status === 2)
+    ?.filter(item => item.status === 1)
     ?.map((item) => (
       <div className="job-block" key={item.jobId}>
         <div className="inner-box">
@@ -367,7 +366,7 @@ const FilterJobsBox = () => {
 
 
           <div className="text">
-            Show <strong>{content?.length || 0}</strong> of <strong>{totalJobs || 0}</strong> jobs
+            Show <strong>{content?.length || 0}</strong> of <strong>{jobs.filter(job => job.status === 1).length || 0}</strong> jobs
           </div>
         </div>
         {/* End show-result */}

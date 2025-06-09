@@ -3,6 +3,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import Cookies from "js-cookie";
 import axios from "axios";
+import jobService from "@/services/jobService";
 
 const JobListingsTable = () => {
   const [appliedJobs, setAppliedJobs] = useState([]);
@@ -11,21 +12,17 @@ const JobListingsTable = () => {
 
   useEffect(() => {
     const fetchAppliedJobs = async () => {
-      setLoading(true);
-      setError("");
       try {
-        const token = Cookies.get("token");
-        const response = await axios.get(
-          "https://localhost:7266/api/Application/my-applications",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        setAppliedJobs(response.data);
+        setLoading(true);
+        const response = await jobService.getAppliedJobs();
+        // Lọc chỉ lấy job đã được approve
+        const approvedJobs = response.filter(job => job.status === 1);
+        setAppliedJobs(approvedJobs);
+        setError(null);
       } catch (err) {
-        setError("Failed to load applied jobs.");
+        console.error('Error fetching applied jobs:', err);
+        setError('Failed to fetch applied jobs');
+        setAppliedJobs([]);
       } finally {
         setLoading(false);
       }

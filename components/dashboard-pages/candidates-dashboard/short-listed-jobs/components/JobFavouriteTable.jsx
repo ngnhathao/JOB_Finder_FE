@@ -1,8 +1,35 @@
 import Link from "next/link.js";
 import jobs from "../../../../../data/job-featured.js";
 import Image from "next/image.js";
+import { useEffect, useState } from "react";
+import jobService from "../../../../../services/jobService";
 
 const JobFavouriteTable = () => {
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchShortlistedJobs = async () => {
+      try {
+        setLoading(true);
+        const response = await jobService.getShortlistedJobs();
+        // Lọc chỉ lấy job đã được approve
+        const approvedJobs = response.filter(job => job.status === 1);
+        setJobs(approvedJobs);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching shortlisted jobs:', err);
+        setError('Failed to fetch shortlisted jobs');
+        setJobs([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchShortlistedJobs();
+  }, []);
+
   return (
     <div className="tabs-box">
       <div className="widget-title">

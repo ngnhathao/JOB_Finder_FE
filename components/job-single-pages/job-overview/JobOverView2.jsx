@@ -1,6 +1,39 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import jobService from "../../services/jobService";
 
 const JobOverView2 = ({ job, industryName, levelName, jobTypeName, experienceLevelName }) => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [job, setJob] = useState(null);
+  const [id, setId] = useState(null);
+
+  useEffect(() => {
+    const fetchJobDetail = async () => {
+      try {
+        setLoading(true);
+        const response = await jobService.getJobById(id);
+        // Kiểm tra nếu job chưa được approve thì không hiển thị
+        if (response.status !== 1) {
+          setError('Job not found');
+          setJob(null);
+          return;
+        }
+        setJob(response);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching job detail:', err);
+        setError('Failed to fetch job details');
+        setJob(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchJobDetail();
+    }
+  }, [id]);
+
   if (!job) return null;
   console.log("JobOverView2 - job.addressDetail:", job.addressDetail);
   return (

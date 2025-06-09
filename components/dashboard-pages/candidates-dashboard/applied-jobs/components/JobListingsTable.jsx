@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import Cookies from "js-cookie";
 import axios from "axios";
 import jobService from "@/services/jobService";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const JobListingsTable = () => {
+  const router = useRouter();
   const [appliedJobs, setAppliedJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -30,6 +33,10 @@ const JobListingsTable = () => {
     fetchAppliedJobs();
   }, []);
 
+  const handleJobClick = (jobId) => {
+    router.push(`/job-single-v3/${jobId}`);
+  };
+
   return (
     <div className="tabs-box">
       <div className="widget-title">
@@ -40,7 +47,7 @@ const JobListingsTable = () => {
           <select className="chosen-single form-select">
             <option>Last 6 Months</option>
             <option>Last 12 Months</option>
-            <option>Last 16 Months</option>
+            <option>Last 16 Months</option> 
             <option>Last 24 Months</option>
             <option>Last 5 year</option>
           </select>
@@ -75,7 +82,30 @@ const JobListingsTable = () => {
                 {appliedJobs.map((item) => (
                   <tr key={item.applicationId}>
                     <td>
-                      {item.job?.title || "N/A"}
+                      <div 
+                        className="job-title" 
+                        onClick={() => handleJobClick(item.job?.jobId)}
+                        style={{ 
+                          cursor: 'pointer',
+                          color: '#1967d2',
+                          fontWeight: '500',
+                          fontSize: '16px',
+                          lineHeight: '1.5',
+                          transition: 'all 0.3s ease',
+                          position: 'relative',
+                          display: 'inline-block'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.color = '#0d47a1';
+                          e.currentTarget.style.transform = 'translateX(5px)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.color = '#1967d2';
+                          e.currentTarget.style.transform = 'translateX(0)';
+                        }}
+                      >
+                        {item.job?.title || "N/A"}
+                      </div>
                     </td>
                     <td>
                       {item.job?.salary ? item.job.salary.toLocaleString() : "N/A"}

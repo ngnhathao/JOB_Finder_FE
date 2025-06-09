@@ -8,7 +8,7 @@ import { reloadCart } from "../../features/shop/shopSlice";
 import Image from "next/image";
 
 const ShopHeader = () => {
-  const { cart } = useSelector((state) => state.shop) || {};
+  const { cart } = useSelector((state) => state.shop);
   const [navbar, setNavbar] = useState(false);
 
   const dispatch = useDispatch();
@@ -28,7 +28,7 @@ const ShopHeader = () => {
   // re-load cart
   useEffect(() => {
     dispatch(reloadCart());
-  }, [dispatch, reloadCart]);
+  }, [dispatch]);
 
   return (
     // <!-- Main Header-->

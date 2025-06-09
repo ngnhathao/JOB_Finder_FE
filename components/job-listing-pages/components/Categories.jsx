@@ -6,7 +6,7 @@ import { addCategory } from "../../../features/filter/filterSlice";
 
 // Nhận industries từ props và prop onSelectIndustry
 const Categories = ({ industries, onSelectIndustry }) => {
-    const { jobList } = useSelector((state) => state.filter) || {};
+    const { category } = useSelector((state) => state.filter.jobList) || {};
     // Không cần state getCategory/setCategory riêng nữa
     // const [getCategory, setCategory] = useState(jobList.category);
 
@@ -31,7 +31,7 @@ const Categories = ({ industries, onSelectIndustry }) => {
         <>
             <select
                 className="form-select"
-                value={jobList.category} // Lấy giá trị category đang chọn từ filter slice
+                value={category || ""} 
                 onChange={categoryHandler}
             >
                 <option value="">Choose an Industry</option>

@@ -14,7 +14,7 @@ const DashboardHeader = () => {
     const [navbar, setNavbar] = useState(false);
 
     // Get user data from Redux store
-    const user = useSelector((state) => state.auth.user);
+    const { user } = useSelector((state) => state.auth);
 
     // Use state for user info to handle updates
     const [displayUserName, setDisplayUserName] = useState("My Account");

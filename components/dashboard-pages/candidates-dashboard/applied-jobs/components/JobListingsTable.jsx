@@ -1,8 +1,35 @@
-import Link from "next/link.js";
-import jobs from "../../../../../data/job-featured.js";
-import Image from "next/image.js";
+'use client';
+import Image from "next/image";
+import { useEffect, useState } from "react";
+import Cookies from "js-cookie";
+import axios from "axios";
+import jobService from "@/services/jobService";
 
 const JobListingsTable = () => {
+  const [appliedJobs, setAppliedJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchAppliedJobs = async () => {
+      try {
+        setLoading(true);
+        const response = await jobService.getAppliedJobs();
+        // Show all jobs regardless of status
+        setAppliedJobs(response);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching applied jobs:', err);
+        setError('Failed to fetch applied jobs');
+        setAppliedJobs([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAppliedJobs();
+  }, []);
+
   return (
     <div className="tabs-box">
       <div className="widget-title">
@@ -23,68 +50,58 @@ const JobListingsTable = () => {
 
       {/* Start table widget content */}
       <div className="widget-content">
-        <div className="table-outer">
+        {loading ? (
+          <div>Loading...</div>
+        ) : error ? (
+          <div className="alert alert-danger">{error}</div>
+        ) : appliedJobs.length === 0 ? (
+          <div>No jobs applied yet.</div>
+        ) : (
           <div className="table-outer">
             <table className="default-table manage-job-table">
               <thead>
                 <tr>
                   <th>Job Title</th>
+                  <th>Salary</th>
+                  <th>Location</th>
                   <th>Date Applied</th>
                   <th>Status</th>
+                  <th>CV</th>
+                  <th>Cover Letter</th>
                   <th>Action</th>
                 </tr>
               </thead>
-
               <tbody>
-                {jobs.slice(0, 4).map((item) => (
-                  <tr key={item.id}>
+                {appliedJobs.map((item) => (
+                  <tr key={item.applicationId}>
                     <td>
-                      {/* <!-- Job Block --> */}
-                      <div className="job-block">
-                        <div className="inner-box">
-                          <div className="content">
-                            <span className="company-logo">
-                              <Image
-                                width={50}
-                                height={49}
-                                src={item.logo}
-                                alt="logo"
-                              />
-                            </span>
-                            <h4>
-                              <Link href={`/job-single-v3/${item.id}`}>
-                                {item.jobTitle}
-                              </Link>
-                            </h4>
-                            <ul className="job-info">
-                              <li>
-                                <span className="icon flaticon-briefcase"></span>
-                                Segment
-                              </li>
-                              <li>
-                                <span className="icon flaticon-map-locator"></span>
-                                London, UK
-                              </li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
+                      {item.job?.title || "N/A"}
                     </td>
-                    <td>Dec 5, 2020</td>
-                    <td className="status">Active</td>
+                    <td>
+                      {item.job?.salary ? item.job.salary.toLocaleString() : "N/A"}
+                    </td>
+                    <td>
+                      {item.job?.addressDetail || item.job?.provinceName || "N/A"}
+                    </td>
+                    <td>{new Date(item.submittedAt).toLocaleString()}</td>
+                    <td>
+                      {item.status === 0 ? "Pending" : item.status === 1 ? "Accepted" : "Rejected"}
+                    </td>
+                    <td>
+                      <a href={item.resumeUrl} target="_blank" rel="noopener noreferrer">
+                        View CV
+                      </a>
+                    </td>
+                    <td>{item.coverLetter}</td>
                     <td>
                       <div className="option-box">
                         <ul className="option-list">
                           <li>
-                            <button data-text="View Aplication">
+                            <a href={item.resumeUrl} target="_blank" rel="noopener noreferrer" data-text="View CV">
                               <span className="la la-eye"></span>
-                            </button>
+                            </a>
                           </li>
-                          <li>
-                            <button data-text="Delete Aplication">
-                              <span className="la la-trash"></span>
-                            </button>
-                          </li>
+                          {/* Thêm các action khác nếu muốn */}
                         </ul>
                       </div>
                     </td>
@@ -93,7 +110,7 @@ const JobListingsTable = () => {
               </tbody>
             </table>
           </div>
-        </div>
+        )}
       </div>
       {/* End table widget content */}
     </div>

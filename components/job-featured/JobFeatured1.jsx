@@ -3,153 +3,105 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { jobService } from "../../services/jobService"; // Import jobService
+import { jobService } from "../../services/jobService";
 
 const JobFeatured1 = () => {
   const [jobs, setJobs] = useState([]);
-  const [companies, setCompanies] = useState([]);
-  const [jobTypesData, setJobTypesData] = useState([]);
-  const [experienceLevels, setExperienceLevels] = useState([]);
-  const [industries, setIndustries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchFeaturedJobs = async () => {
       try {
-        // Fetch job list
-        const jobsData = await jobService.getJobs({}); // Sử dụng jobService.getJobs để fetch job list
-        console.log('API response data for JobFeatured1 (Jobs):', jobsData);
-
-        // Fetch lookup data using jobService
-        const companiesRes = await jobService.getCompanies();
-        const jobTypesRes = await jobService.getJobTypes();
-        const expLevelsRes = await jobService.getExperienceLevels();
-        const industriesRes = await jobService.getIndustries();
-
-        console.log('JobFeatured1 Lookup data:', { companiesRes, jobTypesRes, expLevelsRes, industriesRes });
-
-        // Set states
-        setJobs(jobsData.data || []); // Giả định jobService.getJobs trả về object có trường 'data'
-        setCompanies(companiesRes || []);
-        setJobTypesData(jobTypesRes || []);
-        setExperienceLevels(expLevelsRes || []);
-        setIndustries(industriesRes || []);
-
-      } catch (error) {
-        console.error("Failed to fetch data:", error);
+        setLoading(true);
+        // Gọi API với status = 1 để chỉ lấy job đã được approve
+        const response = await jobService.getJobs({ 
+          status: 1,  // Chỉ lấy job đã được approve
+          limit: 6,   // Giới hạn 6 job
+          page: 1     // Lấy trang đầu tiên
+        });
+        
+        // Kiểm tra và lọc thêm để đảm bảo chỉ hiển thị job đã approve
+        const approvedJobs = response.data.filter(job => job.status === 1);
+        console.log('Featured jobs:', approvedJobs); // Log để debug
+        setJobs(approvedJobs);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching featured jobs:', err);
+        setError('Failed to fetch featured jobs');
+        setJobs([]);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchData();
-  }, []); // Empty dependency array
+    fetchFeaturedJobs();
+  }, []);
 
-  // Helper functions to get names from IDs using lookup data
-  const getCompanyName = (companyId) => {
-    const company = companies.find(c => c.id === companyId);
-    return company ? company.name : 'N/A';
-  };
+  if (loading) {
+    return <div className="text-center py-5">Loading...</div>;
+  }
 
-  const getJobTypeName = (jobTypeId) => {
-    const type = jobTypesData.find(jt => jt.id === jobTypeId);
-    return type ? type.jobTypeName || type.name : 'N/A';
-  };
+  if (error) {
+    return <div className="text-center py-5 text-danger">{error}</div>;
+  }
 
-  const getIndustryName = (industryId) => {
-    // Kiểm tra cả industryId và id trong dữ liệu industries
-    const industry = industries.find(i => i.industryId === industryId || i.id === industryId);
-    // Kiểm tra cả industryName và name trong dữ liệu industries
-    return industry ? industry.industryName || industry.name : 'N/A';
-  };
-
-  const getExperienceLevelName = (expLevelId) => {
-    const level = experienceLevels.find(el => el.id === expLevelId);
-    return level ? level.name : 'N/A';
-  };
+  if (!jobs || jobs.length === 0) {
+    return <div className="text-center py-5">No featured jobs available</div>;
+  }
 
   return (
     <>
-      {/* Sử dụng slice(0, 6) để chỉ hiển thị 6 job đầu tiên */}
-      {jobs.slice(0, 6).map((item) => {
-        // Log chi tiết data item
-        console.log(`--- Rendering Job Item ${item.jobId} ---`);
-        console.log('Item Data:', item);
-        console.log('Company Name (Lookup):', getCompanyName(item.companyId));
-        console.log('Industry Name (Lookup):', getIndustryName(item.industryId));
-        console.log('Job Type Name (Lookup):', getJobTypeName(item.jobTypeId));
-        console.log('Experience Level Name (Lookup):', getExperienceLevelName(item.experienceLevelId));
-        console.log('Logo URL:', item.logo);
-        console.log('---------------------------');
+      {jobs.map((item) => (
+        <div className="job-block col-lg-6 col-md-12 col-sm-12" key={item.id}>
+          <div className="inner-box">
+            <div className="content">
+              <span className="company-logo">
+                <Image
+                  width={50}
+                  height={49}
+                  src={item.logo || '/images/resource/company-logo/default-logo.png'}
+                  alt={item.companyName || 'Company Logo'}
+                />
+              </span>
+              <h4>
+                <Link href={`/job-single-v1/${item.id}`}>{item.jobTitle}</Link>
+              </h4>
 
-        return (
-          <div className="job-block col-lg-6 col-md-12 col-sm-12" key={item.jobId}>
-            <div className="inner-box">
-              <div className="content">
-                {/* Bookmark Button */}
-                <button className="bookmark-btn">
-                  <span className="flaticon-bookmark"></span>
-                </button>
+              <ul className="job-info">
+                <li>
+                  <span className="icon flaticon-briefcase"></span>
+                  {item.companyName}
+                </li>
+                <li>
+                  <span className="icon flaticon-map-locator"></span>
+                  {item.provinceName}
+                </li>
+                <li>
+                  <span className="icon flaticon-money"></span>
+                  {item.salary}
+                </li>
+              </ul>
 
-                <div className="row">
-                  {/* Logo Column - Use col-auto to fit content */}
-                  <div className="col-auto">
-                    <span className="company-logo">
-                      {/* Sử dụng item.logo trực tiếp cho ảnh */}
-                      {item.logo ? (
-                        <Image width={50} height={49} src={item.logo} alt={getCompanyName(item.companyId) || "Company Logo"} unoptimized={true} />
-                      ) : (
-                        <Image width={50} height={49} src={'/images/company-logo/default-logo.png'} alt={getCompanyName(item.companyId) || "Company Logo"} />
-                      )}
-                    </span>
-                  </div>
+              <ul className="job-other-info">
+                {item.industryName && (
+                  <li className="time">{item.industryName}</li>
+                )}
+                {item.jobTypeName && (
+                  <li className="privacy">{item.jobTypeName}</li>
+                )}
+                {item.experienceLevelName && (
+                  <li className="required">{item.experienceLevelName}</li>
+                )}
+              </ul>
 
-                  {/* Job Details Column - Let it take remaining space */}
-                  <div className="col">
-                    {/* Job Title */}
-                    <h4>
-                      {/* Link tới trang chi tiết job */}
-                      <Link href={`/job-single-v1/${item.jobId}`}>{item.jobTitle}</Link>
-                    </h4>
-
-                    {/* Job Info (Company Name, Location, Salary) */}
-                    <ul className="job-info">
-                      {/* Company Name - Lookup */}
-                      {item.companyId && (
-                        <li>
-                          <span className="icon flaticon-briefcase"></span>
-                          {getCompanyName(item.companyId)}
-                        </li>
-                      )}
-                      {/* Địa điểm */}
-                      {item.provinceName && (
-                        <li>
-                          <span className="icon flaticon-map-locator"></span>
-                          {item.provinceName}
-                        </li>
-                      )}
-                      {/* Lương */}
-                      {item.salary && (
-                        <li>
-                          <span className="icon flaticon-money"></span>
-                          {item.salary} USD
-                        </li>
-                      )}
-                    </ul>
-                  </div>
-                </div>
-
-                {/* Job Other Info (Tags) - Lookup */}
-                <ul className="job-other-info">
-                  {/* Industry Tag */}
-                  {item.industryId && <li className="green">{getIndustryName(item.industryId)}</li>}
-                  {/* Job Type Tag */}
-                  {item.jobTypeId && <li className="orange">{getJobTypeName(item.jobTypeId)}</li>}
-                  {/* Experience Level Tag */}
-                  {item.experienceLevelId && <li className="purple">{getExperienceLevelName(item.experienceLevelId)}</li>}
-                </ul>
-              </div>
+              <button className="bookmark-btn">
+                <span className="flaticon-bookmark"></span>
+              </button>
             </div>
           </div>
-        );
-      })}
+        </div>
+      ))}
     </>
   );
 };

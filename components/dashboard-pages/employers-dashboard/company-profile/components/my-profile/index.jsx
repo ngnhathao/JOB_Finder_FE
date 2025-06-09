@@ -34,7 +34,7 @@ const Index = () => {
 
             try {
                 // Assuming the GET endpoint is /api/CompanyProfile/{userId}
-                const response = await fetch(`/api/CompanyProfile/${userId}`);
+                const response = await fetch(`https://localhost:7266/api/CompanyProfile/${userId}`);
                 if (response.ok) {
                     const data = await response.json();
                     console.log("Fetched company profile data:", data);
@@ -212,7 +212,7 @@ const Index = () => {
         // Make the API call
         try {
             const method = initialProfileData ? 'PUT' : 'POST'; // Determine method based on whether profile exists
-            const url = initialProfileData ? `/api/CompanyProfile/${userId}` : '/api/CompanyProfile';
+            const url = initialProfileData ? `https://localhost:7266/api/CompanyProfile/${userId}` : 'https://localhost:7266/api/CompanyProfile';
 
             const response = await fetch(url, {
                 method: method,

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addCategory,
@@ -29,6 +29,7 @@ import DashboardHeader from "../../../header/DashboardHeaderAdmin";
 import "../user-manager/user-manager-animations.css";
 import ApiService from "../../../../services/api.service";
 import API_CONFIG from '../../../../config/api.config';
+import { authService } from "../../../../services/authService";
 
 const JobPostManagement = () => {
   const [jobs, setJobs] = useState([]);
@@ -38,6 +39,18 @@ const JobPostManagement = () => {
   const [displayCount, setDisplayCount] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Separate states for companies and industries
+  const [selectedCompany, setSelectedCompany] = useState("");
+  const [selectedIndustry, setSelectedIndustry] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState("");
+
+  // Debounced states
+  const [debouncedKeyword, setDebouncedKeyword] = useState("");
+  const [debouncedCompany, setDebouncedCompany] = useState("");
+  const [debouncedIndustry, setDebouncedIndustry] = useState("");
+  const [debouncedFilterStatus, setDebouncedFilterStatus] = useState("");
 
   // State để lưu dữ liệu lookup
   const [companies, setCompanies] = useState([]);
@@ -63,131 +76,216 @@ const JobPostManagement = () => {
   const { sort } = jobSort;
   const dispatch = useDispatch();
 
-  // Add state for status filter locally if not using Redux for it
-  const [filterStatus, setFilterStatus] = useState('');
-
   const [alertMsg, setAlertMsg] = useState("");
 
-  const jobStatuses = ["Approved", "Pending", "Rejected"];
+  const jobStatuses = ["Pending", "Approved", "Rejected"];
+
+  // Debounce function
+  const debounce = (func, delay) => {
+    let timeoutId;
+    return (...args) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        func(...args);
+      }, delay);
+    };
+  };
+
+  // Debounced handlers
+  const debouncedKeywordHandler = useCallback(
+    debounce((value) => {
+      setDebouncedKeyword(value);
+    }, 500),
+    []
+  );
+
+  const debouncedCompanyHandler = useCallback(
+    debounce((value) => {
+      setDebouncedCompany(value);
+    }, 500),
+    []
+  );
+
+  const debouncedIndustryHandler = useCallback(
+    debounce((value) => {
+      setDebouncedIndustry(value);
+    }, 500),
+    []
+  );
+
+  const debouncedFilterStatusHandler = useCallback(
+    debounce((value) => {
+      setDebouncedFilterStatus(value);
+    }, 500),
+    []
+  );
 
   // Fetch jobs và lookup data
   useEffect(() => {
-    console.log('useEffect in JobPostManagement triggered');
+    console.log('Initial data fetch started');
+    fetchLookupData();
+  }, []); // Empty dependency array for initial load only
 
-    // Fetch dữ liệu lookup
-    const fetchLookupData = async () => {
-      try {
-        console.log('Fetching lookup data with Promise.all...');
-        const [companiesRes, jobTypesRes, expLevelsRes, industriesRes] = await Promise.all([
-            jobService.getCompanies().catch(err => { console.error('Failed to fetch companies data', err); return []; }),
-            jobService.getJobTypes().catch(err => { console.error('Failed to fetch job types data', err); return []; }),
-            jobService.getExperienceLevels().catch(err => { console.error('Failed to fetch experience levels data', err); return []; }),
-            jobService.getIndustries().catch(err => { console.error('Failed to fetch industries data', err); return []; })
-        ]);
+  // Separate useEffect for jobs fetch
+  useEffect(() => {
+    console.log('Jobs fetch triggered with filters:', {
+      keyword: debouncedKeyword,
+      company: debouncedCompany,
+      industry: debouncedIndustry,
+      status: debouncedFilterStatus
+    });
+    fetchJobs();
+  }, [
+    debouncedKeyword,
+    debouncedCompany,
+    debouncedIndustry,
+    debouncedFilterStatus,
+    location,
+    jobType,
+    datePosted,
+    experience,
+    salary,
+    sort,
+    currentPage,
+    itemsPerPage
+  ]);
 
-        console.log('Raw companies response:', companiesRes);
-
-        // Map companies
-        const mappedCompanies = companiesRes.map(company => {
-          // console.log('Mapping company object:', company); // Remove this log now that we know the structure
-           return ({
-             Id: company.id, // Use company.id for Id
-             CompanyName: company.name, // Use company.name for CompanyName
-             logo: company.logo, // Use company.logo for logo
-           });
-        });
-
-        // Map industries
-         const mappedIndustries = industriesRes.map(industry => ({
-            Id: industry.industryId,
-            IndustryName: industry.industryName,
-         }));
-
-        // Map job types
-         const mappedJobTypes = jobTypesRes.map(type => ({
-            Id: type.id,
-            JobTypeName: type.jobTypeName,
-         }));
-
-        // Map experience levels
-         const mappedExpLevels = expLevelsRes.map(level => ({
-            Id: level.id,
-            Name: level.name,
-         }));
-
-        setCompanies(mappedCompanies);
-        setIndustries(mappedIndustries);
-        setJobTypesData(mappedJobTypes);
-        setExperienceLevels(mappedExpLevels);
-        console.log('Mapped Lookup data states updated (after Promise.all).', { mappedCompanies, mappedIndustries, mappedJobTypes, mappedExpLevels });
-        console.log('Final companies state after fetchLookupData:', mappedCompanies);
-
-      } catch (err) {
-        console.error('An unexpected error occurred during lookup data fetching with Promise.all', err);
-        // Set all lookup states to empty arrays in case of error
-        setCompanies([]);
-        setIndustries([]);
-        setJobTypesData([]);
-        setExperienceLevels([]);
-      }
-    };
-
-    // Logic fetch jobs for admin
   const fetchJobs = async () => {
     try {
       setLoading(true);
-        const filters = {};
+      const filters = {};
 
-        // Use Redux filter states for API parameters
-        if (keyword !== "") filters.keyword = keyword;
-        if (location !== "") filters.location = location; // Assuming location filter maps to provinceName or similar
-        if (category !== "") filters.industryId = parseInt(category); // Assuming category filter maps to industryId
-        if (jobType?.length > 0) filters.jobTypeIds = jobType; // Assuming jobType filter maps to jobTypeIds array
-        if (experience?.length > 0) filters.experienceLevelIds = experience; // Assuming experience filter maps to experienceLevelIds array
-        if (salary?.min !== 0 || salary?.max !== 20000) filters.salaryRange = salary; // Assuming salary filter maps to salaryRange object
-        if (datePosted !== "" && datePosted !== "all") filters.datePosted = datePosted; // Assuming datePosted filter is supported
-        // Add status filter from local state
-        if (filterStatus !== "") filters.status = parseInt(filterStatus); // Assuming status filter maps to status integer
+      // Use debounced values for API parameters
+      if (debouncedKeyword) filters.keyword = debouncedKeyword;
+      if (location) filters.location = location;
+      if (debouncedCompany) filters.companyId = parseInt(debouncedCompany);
+      if (debouncedIndustry) filters.industryId = parseInt(debouncedIndustry);
+      if (jobType?.length > 0) filters.jobTypeIds = jobType;
+      if (experience?.length > 0) filters.experienceLevelIds = experience;
+      if (salary?.min !== 0 || salary?.max !== 20000) filters.salaryRange = salary;
+      if (datePosted && datePosted !== "all") filters.datePosted = datePosted;
+      if (debouncedFilterStatus) filters.status = parseInt(debouncedFilterStatus);
 
-        // Pagination parameters for API (if API supports)
-        filters.page = currentPage;
-        filters.limit = itemsPerPage;
+      // Pagination parameters
+      filters.page = currentPage;
+      filters.limit = itemsPerPage;
 
-        console.log('Fetching jobs with filters (for admin):' + JSON.stringify(filters)); // Log filters as JSON
-        // *** Use API endpoint for admin job list ***
-        const response = await ApiService.request('Job/filter', 'GET', filters); // Using GET /api/Job/filter
+      console.log('Fetching jobs with filters:', filters);
 
-        console.log('Admin Jobs fetch response:', response);
-
-        // *** Handle direct array response from API ***
-        if (Array.isArray(response)) { // Check if response is a direct array
-             setJobs(response); // Set jobs directly from the array
-             setTotalJobs(response.length); // Total is the array length
-             setError(null);
-             console.log('Admin Jobs state updated (direct array): ', response);
-        } else { // Handle unexpected response format (not an array)
-             console.error('Unexpected API response format for admin jobs:', response);
-             setJobs([]);
-             setTotalJobs(0);
-             setError('Unexpected data format from API');
+      // Convert filters to query string
+      const queryParams = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          if (Array.isArray(value)) {
+            value.forEach(v => queryParams.append(key, v));
+          } else {
+            queryParams.append(key, value);
+          }
         }
+      });
 
-      } catch (err) {
-        console.error('Error fetching admin jobs:', err);
-        setError('Failed to fetch admin jobs');
-        console.error(err);
-      setJobs([]);
+      const queryString = queryParams.toString();
+      const url = `Job/filter${queryString ? `?${queryString}` : ''}`;
+      
+      console.log('API Request URL:', url);
+      const response = await ApiService.request(url, 'GET');
+
+      if (Array.isArray(response)) {
+        setJobs(response);
+        setTotalJobs(response.length);
+        setError(null);
+        console.log('Jobs fetched successfully:', response);
+      } else {
+        console.error('Unexpected API response format:', response);
+        setJobs([]);
         setTotalJobs(0);
+        setError('Unexpected data format from API');
+      }
+    } catch (err) {
+      console.error('Error fetching jobs:', err);
+      setError('Failed to fetch jobs');
+      setJobs([]);
+      setTotalJobs(0);
     } finally {
       setLoading(false);
     }
   };
 
-    // Call fetchLookupData first, then fetchJobs
-    fetchLookupData();
-    fetchJobs();
+  // Update the fetchLookupData function to use query parameters
+  const fetchLookupData = async () => {
+    try {
+      console.log('Fetching lookup data...');
+      const [companiesRes, jobTypesRes, expLevelsRes, industriesRes] = await Promise.all([
+        jobService.getCompanies().catch(err => { 
+          console.error('Failed to fetch companies data', err); 
+          return []; 
+        }),
+        jobService.getJobTypes().catch(err => { 
+          console.error('Failed to fetch job types data', err); 
+          return []; 
+        }),
+        jobService.getExperienceLevels().catch(err => { 
+          console.error('Failed to fetch experience levels data', err); 
+          return []; 
+        }),
+        jobService.getIndustries().catch(err => { 
+          console.error('Failed to fetch industries data', err); 
+          return []; 
+        })
+      ]);
 
-  }, [keyword, location, category, jobType, datePosted, experience, salary, sort, currentPage, itemsPerPage, filterStatus]);
+      console.log('Raw API responses:', {
+        companies: companiesRes,
+        jobTypes: jobTypesRes,
+        expLevels: expLevelsRes,
+        industries: industriesRes
+      });
+
+      // Map companies
+      const mappedCompanies = companiesRes.map(company => ({
+        Id: company.id,
+        CompanyName: company.name,
+        logo: company.logo,
+      }));
+
+      // Map industries
+      const mappedIndustries = industriesRes.map(industry => ({
+        Id: industry.industryId,
+        IndustryName: industry.industryName,
+      }));
+
+      // Map job types
+      const mappedJobTypes = jobTypesRes.map(type => ({
+        Id: type.id,
+        JobTypeName: type.jobTypeName,
+      }));
+
+      // Map experience levels
+      const mappedExpLevels = expLevelsRes.map(level => ({
+        Id: level.id,
+        Name: level.name,
+      }));
+
+      setCompanies(mappedCompanies);
+      setIndustries(mappedIndustries);
+      setJobTypesData(mappedJobTypes);
+      setExperienceLevels(mappedExpLevels);
+
+      console.log('Mapped data:', {
+        companies: mappedCompanies,
+        industries: mappedIndustries,
+        jobTypes: mappedJobTypes,
+        expLevels: mappedExpLevels
+      });
+
+    } catch (err) {
+      console.error('Error fetching lookup data:', err);
+      setCompanies([]);
+      setIndustries([]);
+      setJobTypesData([]);
+      setExperienceLevels([]);
+    }
+  };
 
   // Helper function để tìm tên từ ID trong dữ liệu lookup (Sử dụng mapped data)
   const getCompanyName = (companyId) => {
@@ -218,63 +316,117 @@ const JobPostManagement = () => {
   // Pagination logic remains as it operates on the fetched and filtered list
   const totalPages = Math.ceil(totalJobs / itemsPerPage);
 
+  // Lọc jobs theo search và filter
+  const filteredJobs = jobs.filter(job => {
+    const matchSearch = searchKeyword === "" || 
+      job.title?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      job.description?.toLowerCase().includes(searchKeyword.toLowerCase());
+    const matchCompany = selectedCompany === "" || job.companyId === parseInt(selectedCompany);
+    const matchIndustry = selectedIndustry === "" || job.industryId === parseInt(selectedIndustry);
+    const matchStatus = filterStatus === "" || job.status === parseInt(filterStatus);
+    return matchSearch && matchCompany && matchIndustry && matchStatus;
+  });
+
+  // Phân trang
+  const paginatedJobs = filteredJobs.slice((currentPage-1)*itemsPerPage, currentPage*itemsPerPage);
+
+  const handleSearch = (e) => {
+    setSearchKeyword(e.target.value);
+    setCurrentPage(1);
+  };
+
   // Adjust content mapping to display job data and admin actions
-  let content = jobs?.map((item) => (
-    <div className="job-block" key={item.jobId}>
-      <div className="inner-box">
-        <span className="company-logo" style={{ flexShrink: 0 }}>
-          {(() => {
-            const company = companies.find(c => c.Id === item.companyId);
-            const logoSrc = company?.logo || '/images/company-logo/default-logo.png';
-            const companyName = company?.CompanyName || 'N/A';
-            return <Image width={50} height={49} src={logoSrc} alt={companyName} onError={(e) => e.target.src = '/images/company-logo/default-logo.png'} />;
-          })()}
-        </span>
+  let content = paginatedJobs
+    ?.map((item) => (
+      <div className="job-block" key={item.jobId}>
+        <div className="inner-box">
+          <div className="content">
+            {/* Company Logo */}
+            <span className="company-logo">
+              {(() => {
+                const company = companies.find(c => c.Id === item.companyId);
+                const logoSrc = company?.logo || '/images/company-logo/default-logo.png';
+                const companyName = company?.CompanyName || 'N/A';
+                return <Image width={50} height={49} src={logoSrc} alt={companyName} />;
+              })()}
+            </span>
 
-        <div className="job-info-area" style={{ flexGrow: 1, paddingLeft: '15px' }}>
-          <h4 className="job-title">{item.title}</h4>
+            <div className="job-details">
+              {/* Job Title */}
+              <h4>
+                <Link href={`/job-single-v3/${item.jobId}`}>{item.title}</Link>
+              </h4>
 
-          <div className="job-details">
-            <div className="main-info-line">
-              {item.provinceName && (
-                <span className="job-location">
-                  <span className="icon flaticon-map-locator"></span>
-                  {item.provinceName}
-                </span>
-              )}
-              {item.salary !== undefined && (
-                <span className="job-salary">
-                  <span className="icon flaticon-money"></span>
-                  {item.salary} USD
-                </span>
-              )}
+              <ul className="job-info">
+                {/* Company Name from lookup */}
+                {item.companyId && companies.length > 0 && (
+                  <li>
+                    <span className="icon flaticon-building"></span>
+                    {getCompanyName(item.companyId)}
+                  </li>
+                )}
+                {/* Province Name */}
+                {item.provinceName && (
+                  <li>
+                    <span className="icon flaticon-map-locator"></span>
+                    {item.provinceName}
+                  </li>
+                )}
+                {/* Salary */}
+                {item.salary !== undefined && (
+                  <li>
+                    <span className="icon flaticon-money"></span>
+                    {item.salary}
+                  </li>
+                )}
+                {/* Add Status if available on job object */}
+                {item.status !== undefined && (
+                  <li className={`badge badge-status ${item.status}`}>{jobStatuses[item.status]}</li>
+                )}
+                {/* Add Created At if available */}
+                {item.createdAt && (
+                  <li>
+                    <span className="icon fa fa-calendar"></span>
+                    {new Date(item.createdAt).toLocaleDateString()}
+                  </li>
+                )}
+              </ul>
+
+              {/* Job Tags (Industry, Job Type, Experience Level) */}
+              <ul className="job-other-info">
+                {/* Industry tag from lookup */}
+                {item.industryId && industries.length > 0 && (
+                  <li className="time">{getIndustryName(item.industryId)}</li>
+                )}
+                {/* Job Type tag from lookup */}
+                {item.jobTypeId && jobTypesData.length > 0 && (
+                  <li className="time">{getJobTypeName(item.jobTypeId)}</li>
+                )}
+                {/* Experience Level tag from lookup */}
+                {item.experienceLevelId && experienceLevels.length > 0 && (
+                  <li className="urgent">{getExperienceLevelName(item.experienceLevelId)}</li>
+                )}
+              </ul>
             </div>
-
-            <ul className="job-tags">
-              {item.industryId && industries.length > 0 && (
-                <li className="job-tag">{getIndustryName(item.industryId)}</li>
-              )}
-              {item.jobTypeId && jobTypesData.length > 0 && (
-                <li className="job-tag">{getJobTypeName(item.jobTypeId)}</li>
-              )}
-              {item.experienceLevelId && experienceLevels.length > 0 && (
-                <li className="job-tag">{getExperienceLevelName(item.experienceLevelId)}</li>
-              )}
-            </ul>
           </div>
-        </div>
 
-        <div className="actions-area" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', position: 'absolute', top: '16px', right: '16px' }}>
-          <span className="bookmark-icon"><i className="far fa-bookmark"></i></span>
-
-          <div className="job-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-            <button className="btn btn-sm btn-secondary me-1" onClick={() => handleShowEdit(item)}>Edit</button>
-            <button className="btn btn-sm btn-danger" onClick={() => handleShowDelete(item)}>Delete</button>
+          {/* Admin Actions Buttons */}
+          <div className="job-actions">
+            {/* Approve/Reject buttons */}
+            {item.status === 0 && (
+              <button className="btn btn-sm me-1" onClick={() => handleApproveJob(item.jobId)}>Approve</button>
+            )}
+            {item.status === 0 && (
+              <button className="btn btn-sm me-1" onClick={() => handleRejectJob(item.jobId)}>Reject</button>
+            )}
+            {/* Edit button */}
+            <button className="btn btn-sm me-1" onClick={() => handleShowEdit(item)}>Edit</button>
+            {/* Delete button */}
+            <button className="btn btn-sm me-1" onClick={() => handleShowDelete(item)}>Delete</button>
           </div>
         </div>
       </div>
-    </div>
-  ));
+    ));
 
   // Pagination controls - Operate on totalJobs from API and local currentPage/itemsPerPage
   const sortHandler = (e) => {
@@ -334,15 +486,32 @@ const JobPostManagement = () => {
 
   const handleApproveJob = async (jobId) => {
     try {
+      const token = authService.getToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
       console.log(`Attempting to approve job with ID: ${jobId}`);
-      const response = await ApiService.request(`Job/${jobId}/approve`, 'PATCH');
-      if (response.ok) {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7266/api'}/Job/${jobId}/status?newStatus=1`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error response:', errorData);
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Success response:', result);
       setAlertMsg("Job post approved!");
       fetchJobs();
-      } else {
-        const errorData = await response.json();
-        setAlertMsg(errorData.message || `Failed to approve job post: ${response.status}`);
-      }
     } catch (error) {
       console.error('Error approving job:', error);
       setAlertMsg(`Failed to approve job post: ${error.message || error}`);
@@ -351,15 +520,32 @@ const JobPostManagement = () => {
 
   const handleRejectJob = async (jobId) => {
     try {
+      const token = authService.getToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
       console.log(`Attempting to reject job with ID: ${jobId}`);
-      const response = await ApiService.request(`Job/${jobId}/reject`, 'PATCH');
-      if (response.ok) {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7266/api'}/Job/${jobId}/status?newStatus=2`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error response:', errorData);
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Success response:', result);
       setAlertMsg("Job post rejected!");
       fetchJobs();
-      } else {
-        const errorData = await response.json();
-        setAlertMsg(errorData.message || `Failed to reject job post: ${response.status}`);
-      }
     } catch (error) {
       console.error('Error rejecting job:', error);
       setAlertMsg(`Failed to reject job post: ${error.message || error}`);
@@ -506,8 +692,8 @@ const JobPostManagement = () => {
                 <label className="form-label">Status (Select)</label>
                 <select className="form-select" name="status" value={formJob.status !== undefined ? formJob.status : ''} onChange={(e) => setFormJob({...formJob, status: parseInt(e.target.value) || ''})} required>
                   <option value="">Select Status</option>
-                  <option value={0}>Approved</option>
-                  <option value={1}>Pending</option>
+                  <option value={0}>Pending</option>
+                  <option value={1}>Approved</option>
                   <option value={2}>Rejected</option>
                 </select>
               </div>
@@ -594,8 +780,8 @@ const JobPostManagement = () => {
                 <label className="form-label">Status (Select)</label>
                 <select className="form-select" name="status" value={editJob?.status !== undefined ? editJob.status : ''} onChange={handleEditChange} required>
                   <option value="">Select Status</option>
-                  <option value={0}>Approved</option>
-                  <option value={1}>Pending</option>
+                  <option value={0}>Pending</option>
+                  <option value={1}>Approved</option>
                   <option value={2}>Rejected</option>
                 </select>
               </div>
@@ -673,64 +859,126 @@ const JobPostManagement = () => {
     <div className="page-wrapper dashboard" style={{background:'#f7f8fa', minHeight:'100vh'}}>
       <style>{`
         .job-block {
+          position: relative;
+          margin-bottom: 30px;
+        }
+        .job-block .inner-box {
+          position: relative;
+          padding: 32px 20px 22px 30px;
+          background: #ffffff;
+          border: 1px solid #ecedf2;
+          box-sizing: border-box;
+          border-radius: 10px;
+          transition: all 300ms ease;
           display: flex;
-          align-items: center;
           justify-content: space-between;
-          background: #fff;
-          border-radius: 16px;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-          padding: 24px 32px;
-          margin-bottom: 24px;
-          transition: box-shadow 0.2s, background 0.2s, transform 0.18s;
-        }
-        .job-block:hover {
-          background: #f5f7fa;
-          box-shadow: 0 6px 24px rgba(25,103,210,0.08);
-          transform: scale(1.015);
-        }
-        .inner-box {
-          display: flex;
-          width: 100%;
           align-items: center;
-          justify-content: space-between;
         }
-        .job-info-area {
+        .job-block .inner-box:hover {
+          box-shadow: 0px 7px 18px rgba(64, 79, 104, 0.05);
+        }
+        .job-block .content {
+          position: relative;
+          padding-left: 68px;
+          min-height: 51px;
           flex-grow: 1;
-          padding-right: 20px;
         }
-        .job-info {
+        .job-block .company-logo {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 50px;
+          transition: all 300ms ease;
+        }
+        .job-block h4 {
+          font-size: 18px;
+          color: #202124;
+          font-weight: 500;
+          line-height: 26px;
+          margin-bottom: 3px;
+        }
+        .job-block h4 a {
+          color: #202124;
+          transition: all 300ms ease;
+        }
+        .job-block h4 a:hover {
+          color: var(--primary-color);
+        }
+        .job-block .job-info {
+          position: relative;
           display: flex;
-          align-items: center;
-          gap: 24px;
+          flex-wrap: wrap;
+          margin-bottom: 10px;
         }
-        .company-logo {
-          width: 56px;
-          height: 56px;
-          border-radius: 12px;
-          background: #f3f3f3;
-          object-fit: contain;
-          border: 1px solid #eee;
+        .job-block .job-info li {
+          position: relative;
+          font-size: 14px;
+          line-height: 22px;
+          color: #696969;
+          font-weight: 400;
+          padding-left: 25px;
+          margin-bottom: 5px;
+          margin-right: 20px;
         }
-        .job-other-info {
+        .job-block .job-info li .icon {
+          position: absolute;
+          left: 0;
+          top: 0;
+          font-size: 18px;
+          line-height: 22px;
+          color: #696969;
+        }
+        .job-block .job-other-info {
+          position: relative;
           display: flex;
-          gap: 8px;
-          margin-top: 8px;
+          flex-wrap: wrap;
         }
-        .job-other-info li {
-          list-style: none;
+        .job-block .job-other-info li {
+          position: relative;
           font-size: 13px;
-          padding: 4px 12px;
-          border-radius: 8px;
-          background: #e9ecef;
+          line-height: 15px;
+          margin-right: 15px;
+          padding: 5px 20px;
+          border-radius: 50px;
+          margin-bottom: 10px;
+        }
+        .job-block .job-other-info li.time {
+          background: rgba(25, 103, 210, 0.15);
+          color: var(--primary-color);
+        }
+        .job-block .job-other-info li.urgent {
+          background: rgba(52, 168, 83, 0.15);
+          color: #34a853;
         }
         .job-actions {
           display: flex;
-          flex-direction: column;
-          align-items: flex-end;
           gap: 10px;
         }
-        .job-actions button {
-          min-width: 110px;
+        .job-actions .btn {
+          position: relative;
+          display: inline-block;
+          text-align: center;
+          white-space: nowrap;
+          vertical-align: middle;
+          user-select: none;
+          border: 1px solid #ecedf2;
+          padding: 6px 16px;
+          font-size: 13px;
+          line-height: 1.5;
+          border-radius: 8px;
+          transition: all 0.3s ease;
+          cursor: pointer;
+          font-weight: 500;
+          background: #ffffff;
+          color: #696969;
+        }
+        .job-actions .btn:hover, .job-actions .btn:focus {
+          background: #f5f7fa;
+          border-color: #1967d2;
+          color: #1967d2;
+          box-shadow: 0 2px 8px rgba(25,103,210,0.08);
+          transform: scale(1.05);
+          transition: all 0.18s;
         }
         .badge-status {
           font-size: 13px;
@@ -741,227 +989,32 @@ const JobPostManagement = () => {
         .badge-status.1 { background: #fff3cd; color: #856404; }
         .badge-status.2 { background: #f8d7da; color: #842029; }
         @media (max-width: 768px) {
-          .job-block { flex-direction: column; align-items: flex-start; }
-          .job-info { flex-direction: column; align-items: flex-start; gap: 8px; }
-          .job-actions { flex-direction: row; align-items: center; margin-top: 12px; }
-        }
-        .btn.btn-sm:hover, .btn.btn-sm:focus {
-          background: #f5f7fa;
-          border-color: #1967d2;
-          color: #1967d2;
-          box-shadow: 0 2px 8px rgba(25,103,210,0.08);
-          transform: scale(1.05);
-          transition: all 0.18s;
-        }
-        .job-details {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        /* Added styles for the new layout structure */
-        .company-logo-title {
-            display: flex;
-            align-items: center;
-            gap: 8px; /* Space between logo and small company name */
-            margin-bottom: 8px; /* Space below logo/small name */
-        }
-        .company-name-small {
-            font-size: 14px; /* Smaller font size */
-            color: #555; /* Grey color */
-        }
-        .job-details h4 {
-            margin-top: 0;
-            margin-bottom: 4px; /* Space below main company name */
-            font-size: 18px; /* Adjust font size if needed */
-        }
-        .job-info li {
-             list-style: none;
-             display: flex;
-             align-items: center;
-             gap: 4px; /* Space between icon and text */
-        }
-        .job-info li .icon {
-            font-size: 16px; /* Adjust icon size */
-            color: #555; /* Icon color */
-        }
-        /* New styles for template layout */
-        .inner-box {
-            position: relative; /* Needed for absolute positioning of bookmark */
-        }
-        .job-info-area {
-            flex-direction: column; /* Stack logo/small name and main info */
-            align-items: flex-start; /* Align items to the start */
-            gap: 16px; /* Space between logo/small name block and main info block */
-            flex-grow: 1; /* Allow info area to take available space */
-            padding-right: 120px; /* Add space for buttons/bookmark */
-        }
-        .job-meta-top-left {
-            display: flex;
-            align-items: center;
-            gap: 8px; /* Space between logo and small name */
-        }
-        .main-info-line {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap; /* Allow items to wrap on smaller screens */
-            gap: 15px; /* Space between items in the main info line */
-        }
-        .main-info-line h4 {
-            margin: 0; /* Remove default h4 margins */
-        }
-        .job-info {
-            padding-left: 0; /* Remove default ul padding */
-            margin-bottom: 0; /* Remove default ul margin */
-            display: flex; /* Ensure job-info is flex container */
-            align-items: center;
-            gap: 15px; /* Space between job-info items */
-            flex-wrap: wrap; /* Allow items to wrap */
-        }
-        .job-info li {
-            margin: 0; /* Remove default li margins */
-             list-style: none; /* Ensure no list bullets */
-        }
-        .job-other-info {
-            padding-left: 0; /* Remove default ul padding */
-             margin-top: 12px; /* Space above tags */
-        }
-        .bookmark-icon {
-            position: absolute;
-            top: 20px; /* Adjust position from top */
-            right: 20px; /* Adjust position from right (considering padding) */
-            font-size: 20px;
-            color: #999; /* Bookmark icon color */
-        }
-        .job-actions {
-            position: absolute;
-            top: 20px; /* Align actions to the top */
-            right: 80px; /* Position actions to the right of bookmark */
-            display: flex;
+          .job-block .inner-box {
             flex-direction: column;
-            align-items: flex-end;
-            gap: 10px;
-        }
-        @media (max-width: 768px) {
-             .job-info-area { padding-right: 0; }
-             .bookmark-icon { top: auto; bottom: 20px; right: 80px; }
-             .job-actions { top: auto; bottom: 20px; right: 20px; }
-             .main-info-line { flex-direction: column; align-items: flex-start; gap: 8px;}
-             .job-info { flex-direction: column; align-items: flex-start; gap: 8px;}
-             .job-other-info { margin-top: 8px;}
-        }
-
-        /* New styles for job block layout */
-        .job-block {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          background: #fff;
-          border-radius: 16px;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-          padding: 16px 24px;
-          margin-bottom: 16px;
-          transition: box-shadow 0.2s, background 0.2s, transform 0.18s;
-        }
-        .job-block:hover {
-          background: #f5f7fa;
-          box-shadow: 0 6px 24px rgba(25,103,210,0.08);
-          transform: scale(1.015);
-        }
-        .inner-box {
-          display: flex;
-          width: 100%;
-          align-items: center;
-          justify-content: space-between;
-          position: relative;
-        }
-        .job-info-area {
-          flex-grow: 1;
-          padding-right: 120px;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        .job-meta-top-left {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 8px;
-        }
-        .company-logo {
-          width: 50px;
-          height: 49px;
-          border-radius: 8px;
-          background: #f3f3f3;
-          object-fit: contain;
-          border: 1px solid #eee;
-        }
-        .company-name-small {
-          font-size: 14px;
-          color: #555;
-          font-weight: 500;
-        }
-        .job-details {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        .main-info-line {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          flex-wrap: wrap;
-        }
-        .job-location, .job-salary {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 14px;
-          color: #333;
-        }
-        .job-location .icon, .job-salary .icon {
-          font-size: 16px;
-          color: #666;
-        }
-        .job-tags {
-          display: flex;
-          gap: 8px;
-          padding: 0;
-          margin: 0;
-        }
-        .job-tag {
-          list-style: none;
-          background: #e0f7fa;
-          color: #00695c;
-          padding: 4px 12px;
-          border-radius: 12px;
-          font-size: 13px;
-          font-weight: 500;
-        }
-        .bookmark-icon {
-          position: absolute;
-          top: 16px;
-          right: 80px;
-          font-size: 20px;
-          color: #999;
-        }
-        .job-actions {
-          position: absolute;
-          top: 16px;
-          right: 16px;
-          display: flex;
-          flex-direction: column;
-          align-items: flex-end;
-          gap: 8px;
-        }
-        .job-actions button {
-          min-width: 80px;
-        }
-        @media (max-width: 768px) {
-          .job-block { flex-direction: column; align-items: flex-start; }
-          .job-info-area { padding-right: 0; }
-          .bookmark-icon { top: auto; bottom: 16px; right: 16px; }
-          .job-actions { top: auto; bottom: 16px; right: 16px; flex-direction: row; gap: 8px; }
-          .main-info-line { flex-direction: column; align-items: flex-start; gap: 8px; }
+            align-items: flex-start;
+          }
+          .job-block .content {
+            padding-left: 0;
+            margin-bottom: 20px;
+          }
+          .job-block .company-logo {
+            position: relative;
+            margin-bottom: 15px;
+          }
+          .job-block .job-info {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+          }
+          .job-actions {
+            width: 100%;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+          }
+          .job-actions .btn {
+            flex: 1;
+            min-width: 80px;
+          }
         }
       `}</style>
       <span className="header-span"></span>
@@ -987,22 +1040,50 @@ const JobPostManagement = () => {
                       className="form-control form-control-sm"
                       style={{width:180}}
                       placeholder="Search job title..."
-                      value={keyword}
-                      onChange={(e) => dispatch(addKeyword(e.target.value))}
+                      value={searchKeyword}
+                      onChange={handleSearch}
                     />
-                    <select className="form-select form-select-sm" style={{width:140}} value={category} onChange={(e)=>dispatch(addCategory(e.target.value))}>
+                    <select 
+                      className="form-select form-select-sm" 
+                      style={{width:140}} 
+                      value={selectedCompany}
+                      onChange={(e) => {
+                        setSelectedCompany(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                    >
                       <option value="">All Companies</option>
-                      {companies.map(company => <option key={company.Id} value={company.Id}>{company.CompanyName}</option>)}
+                      {companies.map(company => (
+                        <option key={company.Id} value={company.Id}>{company.CompanyName}</option>
+                      ))}
                     </select>
-                    <select className="form-select form-select-sm" style={{width:140}} value={category} onChange={(e)=>dispatch(addCategory(e.target.value))}>
+                    <select 
+                      className="form-select form-select-sm" 
+                      style={{width:140}} 
+                      value={selectedIndustry}
+                      onChange={(e) => {
+                        setSelectedIndustry(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                    >
                       <option value="">All Industries</option>
-                      {industries.map(industry => <option key={industry.Id} value={industry.Id}>{industry.IndustryName}</option>)}
+                      {industries.map(industry => (
+                        <option key={industry.Id} value={industry.Id}>{industry.IndustryName}</option>
+                      ))}
                     </select>
-                    <select className="form-select form-select-sm" style={{width:120}} value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
+                    <select 
+                      className="form-select form-select-sm" 
+                      style={{width:120}} 
+                      value={filterStatus}
+                      onChange={(e) => {
+                        setFilterStatus(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                    >
                       <option value="">All Status</option>
-                      <option value="Approved">Approved</option>
-                      <option value="Pending">Pending</option>
-                      <option value="Rejected">Rejected</option>
+                      <option value="0">Pending</option>
+                      <option value="1">Approved</option>
+                      <option value="2">Rejected</option>
                     </select>
                     <button className="btn btn-primary btn-sm" onClick={handleShowAdd}>Add Job</button>
                   </div>
@@ -1012,7 +1093,7 @@ const JobPostManagement = () => {
                     <div className="spinner"></div>
                   ) : (
                     <div>
-                      {jobs.length === 0 ? (
+                      {paginatedJobs.length === 0 ? (
                         <div style={{padding:32, textAlign:'center'}}>No job found</div>
                       ) : (
                         content

@@ -1,4 +1,5 @@
 import axios from "axios";
+import Cookies from 'js-cookie';
 
 const API_URL = "https://localhost:7266/api";
 
@@ -374,6 +375,82 @@ export const jobService = {
     }
   },
 
+  updateJob: async (jobId, jobData) => {
+    try {
+      const formData = new FormData();
+      
+      // Thêm các trường dữ liệu vào FormData
+      formData.append('Title', jobData.title);
+      formData.append('Description', jobData.description);
+      formData.append('CompanyId', parseInt(jobData.companyId));
+      formData.append('Salary', parseInt(jobData.salary));
+      formData.append('IndustryId', parseInt(jobData.industryId));
+      formData.append('ExpiryDate', new Date(jobData.expiryDate).toISOString());
+      formData.append('LevelId', parseInt(jobData.levelId));
+      formData.append('JobTypeId', parseInt(jobData.jobTypeId));
+      formData.append('ExperienceLevelId', parseInt(jobData.experienceLevelId));
+      formData.append('TimeStart', new Date(jobData.timeStart).toISOString());
+      formData.append('TimeEnd', new Date(jobData.timeEnd).toISOString());
+      formData.append('Status', jobData.status);
+      formData.append('ProvinceName', jobData.provinceName);
+      formData.append('AddressDetail', jobData.addressDetail);
+
+      console.log('Dữ liệu gửi lên server:', Object.fromEntries(formData));
+
+      const response = await axios.put(
+        `${API_URL}/Job/${jobId}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Lỗi khi cập nhật công việc:", error);
+      throw error;
+    }
+  },
+
+  async getAppliedJobs() {
+    try {
+      // Try to get token from cookies first
+      let token = Cookies.get('token');
+      
+      // If not in cookies, try localStorage as fallback
+      if (!token) {
+        token = localStorage.getItem('token');
+      }
+
+      console.log('Token status:', token ? 'exists' : 'missing');
+      
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      console.log('Making request to:', `${API_URL}/Application/my-applications`);
+      const response = await axios.get(`${API_URL}/Application/my-applications`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true // Enable sending cookies with the request
+      });
+      
+      console.log('Response from applied jobs:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching applied jobs:", error);
+      if (error.response) {
+        console.error("Error response data:", error.response.data);
+        console.error("Error response status:", error.response.status);
+      }
+      throw error;
+    }
+  },
+
 };
 
+export default jobService;
 

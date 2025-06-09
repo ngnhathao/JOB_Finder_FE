@@ -12,9 +12,6 @@ const EmployerManagement = () => {
   const [loading, setLoading] = useState(true);
   const [selectedEmployer, setSelectedEmployer] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editEmployer, setEditEmployer] = useState(null);
-  const [editError, setEditError] = useState("");
   const [alertMsg, setAlertMsg] = useState("");
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -60,6 +57,7 @@ const EmployerManagement = () => {
         Contact: item.contact,
         IndustryId: item.industryId || '',
         IndustryName: item.industryName || 'N/A',
+
         IsLocked: !item.isActive
       }));
       setEmployers(mapped);
@@ -75,6 +73,7 @@ const EmployerManagement = () => {
     try {
       await ApiService.verifyCompany(employerId);
       setAlertMsg("Company verified!");
+
       fetchEmployers();
     } catch (error) {
       console.error('Error verifying employer:', error);
@@ -96,6 +95,19 @@ const EmployerManagement = () => {
     }
   };
 
+
+
+  // Lấy danh sách industry duy nhất từ employers
+  const industryList = Array.from(new Set(employers.map(e => e.IndustryName).filter(Boolean)));
+  // Lấy danh sách team size mẫu
+  const teamSizeOptions = [
+    { label: 'All', value: 'all' },
+    { label: '1-50', value: '1-50' },
+    { label: '51-200', value: '51-200' },
+    { label: '201-500', value: '201-500' },
+    { label: '501+', value: '501+' },
+  ];
+
   // Filter nâng cao
   const filteredEmployers = employers.filter(emp => {
     // Search
@@ -111,6 +123,7 @@ const EmployerManagement = () => {
                       (filterLock === 'locked' ? emp.IsLocked === true : emp.IsLocked === false);
 
     return matchSearch && matchStatus && matchLock;
+
   });
 
   // Pagination
@@ -122,10 +135,12 @@ const EmployerManagement = () => {
 
   // Helper để lấy tên ngành từ id
   const getIndustryName = (id) => {
+
     console.log('Getting name for industry ID:', id);
     const found = industries.find(ind => ind.industryId === id);
     console.log('Found industry:', found);
     return found ? found.industryName : id;
+
   };
 
   return (

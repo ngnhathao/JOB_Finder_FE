@@ -97,21 +97,21 @@ const FilterJobsBox = () => {
     const fetchJobs = async () => {
       try {
         setLoading(true);
-        const filters = {};
-
-        if (keyword !== "") filters.keyword = keyword;
-        if (location !== "") filters.location = location;
-        if (destination?.min !== 0 || destination?.max !== 100) filters.destination = destination;
-        if (salary?.min !== 0 || salary?.max !== 20000) filters.salary = salary;
-        if (category !== "") filters.category = category;
-        if (jobType?.length > 0) filters.jobType = jobType;
-        if (datePosted !== "" && datePosted !== "all") filters.datePosted = datePosted;
-        if (experience?.length > 0) filters.experience = experience;
-        if (tag !== "") filters.tag = tag;
-        if (sort !== "") filters.sort = sort;
-
-        filters.page = currentPage;
-        filters.limit = itemsPerPage;
+        const filters = {
+          status: 1, // Chỉ lấy job đã được approve
+          ...(keyword !== "" && { keyword }),
+          ...(location !== "" && { location }),
+          ...(destination?.min !== 0 || destination?.max !== 100) && { destination },
+          ...(salary?.min !== 0 || salary?.max !== 20000) && { salary },
+          ...(category !== "" && { category }),
+          ...(jobType?.length > 0 && { jobType }),
+          ...(datePosted !== "" && datePosted !== "all" && { datePosted }),
+          ...(experience?.length > 0 && { experience }),
+          ...(tag !== "" && { tag }),
+          ...(sort !== "" && { sort }),
+          page: currentPage,
+          limit: itemsPerPage
+        };
 
         console.log('Fetching jobs with filters:', filters);
         const response = await jobService.getJobs(filters);
@@ -122,14 +122,12 @@ const FilterJobsBox = () => {
       } catch (err) {
         console.error('Error in fetchJobs:', err);
         setError('Failed to fetch jobs');
-        console.error(err);
         setJobs([]);
         setTotalJobs(0);
       } finally { 
         setLoading(false);
       }
     };
-
 
     fetchJobs();
   }, [keyword, location, destination, category, jobType, datePosted, experience, salary, tag, sort, currentPage, itemsPerPage]);
@@ -217,6 +215,7 @@ const FilterJobsBox = () => {
 
 
   let content = jobs
+    ?.filter(item => item.status === 1)
     ?.map((item) => (
       <div className="job-block" key={item.jobId}>
         <div className="inner-box">
@@ -336,11 +335,18 @@ const FilterJobsBox = () => {
     return <div className="text-center py-5">Loading...</div>;
   }
 
-
   if (error) {
     return <div className="text-center py-5 text-danger">{error}</div>;
   }
 
+  if (!loading && jobs.length === 0) {
+    return (
+      <div className="text-center py-5">
+        <h3>Không tìm thấy công việc phù hợp</h3>
+        <p>Vui lòng thử lại với bộ lọc khác</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -360,7 +366,7 @@ const FilterJobsBox = () => {
 
 
           <div className="text">
-            Show <strong>{jobs?.length}</strong> of <strong>{totalJobs}</strong> jobs
+            Show <strong>{content?.length || 0}</strong> of <strong>{jobs.filter(job => job.status === 1).length || 0}</strong> jobs
           </div>
         </div>
         {/* End show-result */}

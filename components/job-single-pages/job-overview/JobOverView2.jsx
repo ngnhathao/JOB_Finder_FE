@@ -1,14 +1,47 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { jobService } from "@/services/jobService";
 
-const JobOverView2 = ({ job, industryName, levelName, jobTypeName, experienceLevelName }) => {
-  if (!job) return null;
-  console.log("JobOverView2 - job.addressDetail:", job.addressDetail);
+const JobOverView2 = ({ job: initialJob, industryName, levelName, jobTypeName, experienceLevelName }) => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [jobData, setJobData] = useState(null);
+  const [id, setId] = useState(null);
+
+  useEffect(() => {
+    const fetchJobDetail = async () => {
+      try {
+        setLoading(true);
+        const response = await jobService.getJobById(id);
+        // Kiểm tra nếu job chưa được approve thì không hiển thị
+        if (response.status !== 1) {
+          setError('Job not found');
+          setJobData(null);
+          return;
+        }
+        setJobData(response);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching job detail:', err);
+        setError('Failed to fetch job details');
+        setJobData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchJobDetail();
+    }
+  }, [id]);
+
+  if (!jobData) return null;
+  console.log("JobOverView2 - job.addressDetail:", jobData.addressDetail);
   return (
     <ul>
       <li>
         <i className="icon icon-salary"></i>
         <h5>Salary:</h5>
-        <span>{job.salary}</span>
+        <span>{jobData.salary}</span>
       </li>
       <li>
         <i className="icon icon-briefcase"></i>
@@ -33,32 +66,32 @@ const JobOverView2 = ({ job, industryName, levelName, jobTypeName, experienceLev
       <li>
         <i className="icon icon-expiry"></i>
         <h5>Application Deadline:</h5>
-        <span>{job.expiryDate ? new Date(job.expiryDate).toLocaleDateString() : 'N/A'}</span>
+        <span>{jobData.expiryDate ? new Date(jobData.expiryDate).toLocaleDateString() : 'N/A'}</span>
       </li>
       <li>
         <i className="icon icon-clock"></i>
         <h5>Start Date:</h5>
-        <span>{job.timeStart ? new Date(job.timeStart).toLocaleDateString() : 'N/A'}</span>
+        <span>{jobData.timeStart ? new Date(jobData.timeStart).toLocaleDateString() : 'N/A'}</span>
       </li>
       <li>
         <i className="icon icon-clock"></i>
         <h5>End Date:</h5>
-        <span>{job.timeEnd ? new Date(job.timeEnd).toLocaleDateString() : 'N/A'}</span>
+        <span>{jobData.timeEnd ? new Date(jobData.timeEnd).toLocaleDateString() : 'N/A'}</span>
       </li>
       <li>
         <i className="icon icon-location"></i>
         <h5>Location:</h5>
-        <span>{job.provinceName}</span>
+        <span>{jobData.provinceName}</span>
       </li>
       <li>
         <i className="icon icon-location"></i>
         <h5>Address:</h5>
-        <span>{job.addressDetail}</span>
+        <span>{jobData.addressDetail}</span>
       </li>
       <li>
         <i className="icon icon-calendar"></i>
         <h5>Date Posted:</h5>
-        <span>{job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'N/A'}</span>
+        <span>{jobData.createdAt ? new Date(jobData.createdAt).toLocaleDateString() : 'N/A'}</span>
       </li>
     </ul>
   );

@@ -1,6 +1,6 @@
 import API_CONFIG from '../config/api.config';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7266/api';
+const BASE_URL = 'https://localhost:7266/api';
 
 
 // Định nghĩa class trước
@@ -59,18 +59,34 @@ class ApiServiceClass {
     if (jobData instanceof FormData) {
       options = {
         method: 'POST',
-        body: jobData
-        // KHÔNG set Content-Type, browser sẽ tự động set boundary cho multipart/form-data
+        body: jobData,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+        // Don't set Content-Type for FormData, browser will set it automatically with boundary
       };
     } else {
-      options = API_CONFIG.getRequestOptions('POST', jobData);
+      options = {
+        ...API_CONFIG.getRequestOptions('POST', jobData),
+        headers: {
+          ...API_CONFIG.getRequestOptions('POST', jobData).headers,
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      };
     }
-    const response = await fetch(url, options);
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `HTTP error! status: ${response.status}`);
+    
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Job creation error:', errorData);
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    } catch (error) {
+      console.error('Job creation exception:', error);
+      throw error;
     }
-    return response.json();
   }
 
   // Company APIs
@@ -82,7 +98,7 @@ class ApiServiceClass {
 
   static async verifyCompany(id) {
     const url = API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.COMPANY.VERIFY(id));
-    const options = API_CONFIG.getRequestOptions('PUT');
+    const options = API_CONFIG.getRequestOptions('PATCH');
     return API_CONFIG.handleResponse(await fetch(url, options));
   }
 
@@ -96,8 +112,32 @@ class ApiServiceClass {
   // Generic method để xử lý các API calls khác
   static async request(endpoint, method = 'GET', data = null, params = null) {
     const url = API_CONFIG.getUrlWithParams(endpoint, params);
-    const options = API_CONFIG.getRequestOptions(method, data);
-    return API_CONFIG.handleResponse(await fetch(url, options));
+    const token = localStorage.getItem('token');
+    const options = {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      credentials: 'include'
+    };
+
+    if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+      options.body = JSON.stringify(data);
+    }
+
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    } catch (error) {
+      console.error('API request error:', error);
+      throw error;
+    }
   }
 
   static async getCompanyProfileById(id) {

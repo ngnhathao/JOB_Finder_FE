@@ -83,7 +83,7 @@ const API_CONFIG = {
     },
     MASTER_DATA: {
       LEVELS: 'master/levels',
-      INDUSTRIES: 'master/industries',
+      INDUSTRIES: 'Industry',
       JOB_TYPES: 'master/job-types',
       EXPERIENCE_LEVELS: 'master/experience-levels',
       PROVINCES: 'master/provinces',

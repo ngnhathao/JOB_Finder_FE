@@ -56,8 +56,8 @@ const EmployerManagement = () => {
         Website: item.website,
         Contact: item.contact,
         IndustryId: item.industryId || '',
-
         IndustryName: item.industryName || 'N/A',
+
         IsLocked: !item.isActive
       }));
       setEmployers(mapped);
@@ -71,7 +71,6 @@ const EmployerManagement = () => {
 
   const handleVerify = async (employerId) => {
     try {
-
       await ApiService.verifyCompany(employerId);
       setAlertMsg("Company verified!");
 
@@ -97,6 +96,7 @@ const EmployerManagement = () => {
   };
 
 
+
   // Lấy danh sách industry duy nhất từ employers
   const industryList = Array.from(new Set(employers.map(e => e.IndustryName).filter(Boolean)));
   // Lấy danh sách team size mẫu
@@ -108,7 +108,6 @@ const EmployerManagement = () => {
     { label: '501+', value: '501+' },
   ];
 
-
   // Filter nâng cao
   const filteredEmployers = employers.filter(emp => {
     // Search
@@ -118,7 +117,6 @@ const EmployerManagement = () => {
     const matchStatus = filterStatus === 'all' ||
       (filterStatus === 'verified' && emp.IsVerified) ||
       (filterStatus === 'pending' && !emp.IsVerified);
-
 
     // Lock Status Filter Logic
     const matchLock = filterLock === 'all' || 
@@ -295,9 +293,7 @@ const EmployerManagement = () => {
                                 <div className="employer-meta">
                                   <span><i className="fa fa-map-marker-alt" style={{marginRight:4}}></i> {emp.Location}</span>
                                   <span><i className="fa fa-users" style={{marginRight:4}}></i> {emp.TeamSize}</span>
-
                                   <span><i className="fa fa-briefcase" style={{marginRight:4}}></i> {emp.IndustryName}</span>
-
                                   {emp.IsVerified ? (
                                     <span className="badge bg-success">Verified</span>
                                   ) : (
@@ -311,9 +307,7 @@ const EmployerManagement = () => {
                               {!emp.IsVerified && (
                                 <button className="btn btn-sm me-1" onClick={() => handleVerify(emp.Id)}>Approve</button>
                               )}
-
                               <button className="btn btn-sm lock-toggle-btn" onClick={() => handleToggleLock(emp.Id, emp.IsLocked)}>{emp.IsLocked ? "Unlock" : "Lock"}</button>
-
                             </div>
                           </div>
                         ))
@@ -344,38 +338,6 @@ const EmployerManagement = () => {
           </div>
         </div>
       </section>
-
-      {/* Company Profile Modal */}
-      {showDetailModal && selectedEmployer && (
-        <div className="modal show" style={{display:'block'}}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Company Profile</h5>
-                <button className="btn-close" onClick={()=>setShowDetailModal(false)}></button>
-              </div>
-              <div className="modal-body">
-                <div className="text-center mb-3">
-                  <img src={selectedEmployer.UrlCompanyLogo || selectedEmployer.ImageLogoLgr} alt="logo" style={{width:96, height:96, objectFit:'contain', background:'#fff', borderRadius:12}} />
-                </div>
-                <h4>{selectedEmployer.CompanyName}</h4>
-                <p><b>Location:</b> {selectedEmployer.Location}</p>
-                <p><b>Team Size:</b> {selectedEmployer.TeamSize}</p>
-                <p><b>Website:</b> <a href={selectedEmployer.Website} target="_blank" rel="noopener noreferrer">{selectedEmployer.Website}</a></p>
-                <p><b>Email/Phone:</b> {selectedEmployer.Contact}</p>
-                <p><b>Description:</b> {selectedEmployer.companyProfileDescription}</p>
-                <p><b>Status:</b> {selectedEmployer.IsVerified ? "Verified" : "Pending Approval"}</p>
-                <p><b>Industry:</b> {getIndustryName(selectedEmployer.IndustryName)}</p>
-              </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={()=>setShowDetailModal(false)}>Close</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-
     </div>
   );
 };

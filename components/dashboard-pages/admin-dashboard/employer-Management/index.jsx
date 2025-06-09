@@ -12,9 +12,6 @@ const EmployerManagement = () => {
   const [loading, setLoading] = useState(true);
   const [selectedEmployer, setSelectedEmployer] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editEmployer, setEditEmployer] = useState(null);
-  const [editError, setEditError] = useState("");
   const [alertMsg, setAlertMsg] = useState("");
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -57,6 +54,7 @@ const EmployerManagement = () => {
         Website: item.website,
         Contact: item.contact,
         IndustryId: item.industryId || '',
+        IndustryName: item.industryName || '',
         IsLocked: !item.isActive
       }));
       setEmployers(mapped);
@@ -75,7 +73,10 @@ const EmployerManagement = () => {
 
   const handleVerify = async (employerId) => {
     try {
-      await ApiService.verifyCompany(employerId);
+      await ApiService.request(
+        `CompanyProfile/${employerId}/Verify`,
+        'PUT'
+      );
       setAlertMsg("Account verified!");
       fetchEmployers();
     } catch (error) {
@@ -98,85 +99,9 @@ const EmployerManagement = () => {
     }
   };
 
-  const handleShowEdit = (employer) => {
-    setEditEmployer({ ...employer });
-    setEditError("");
-    setShowEditModal(true);
-    setSelectedCompanyImageFile(null);
-    setSelectedCompanyLgrImageFile(null);
-  };
-
-  const handleEditChange = (e) => {
-    const { name, value, files } = e.target;
-    const file = files && files[0];
-
-    if (name === "logoFile" && file) {
-      setSelectedCompanyImageFile(file);
-      setEditEmployer({
-        ...editEmployer,
-        UrlCompanyLogo: URL.createObjectURL(file)
-      });
-    } else if (name === "logoLgrFile" && file) {
-      setSelectedCompanyLgrImageFile(file);
-      setEditEmployer({
-        ...editEmployer,
-        ImageLogoLgr: URL.createObjectURL(file)
-      });
-    } else if (name !== "logo background" && name !== "logoLgrFile") {
-      setEditEmployer({ ...editEmployer, [name]: value });
-    }
-  };
-
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    // Validate
-    if (!editEmployer.CompanyName || !editEmployer.Contact) {
-      setEditError("Company name và Contact là bắt buộc.");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('UserId', editEmployer.Id); // API expects UserId (PascalCase)
-    formData.append('CompanyName', editEmployer.CompanyName); // Ensure PascalCase
-    formData.append('CompanyProfileDescription', editEmployer.companyProfileDescription || ''); // Ensure PascalCase
-    formData.append('Location', editEmployer.Location || ''); // Ensure PascalCase
-    formData.append('TeamSize', editEmployer.TeamSize || ''); // Ensure PascalCase
-    formData.append('Website', editEmployer.Website || ''); // Ensure PascalCase
-    formData.append('Contact', editEmployer.Contact); // Ensure PascalCase
-    formData.append('IndustryId', editEmployer.IndustryId || ''); // API expects IndustryId (PascalCase)
-
-    // Append image files if selected
-    if (selectedCompanyImageFile) {
-      formData.append('logoFile', selectedCompanyImageFile); // Append as logoFile
-    }
-    if (selectedCompanyLgrImageFile) {
-       formData.append('logoLgrFile', selectedCompanyLgrImageFile); // Append as logoLgrFile
-    }
-
-    try {
-      // Use ApiService.request with PUT method and FormData to /api/CompanyProfile/{userId}
-      // The API expects userId in the path, and UserId in the form data.
-      const res = await ApiService.request(`CompanyProfile/${editEmployer.Id}`, 'PUT', formData, {
-          'Content-Type': undefined // Let browser set Content-Type with boundary for FormData
-      });
-
-      if (res.ok) { // Check if the response was successful
-        setAlertMsg("Cập nhật công ty thành công!");
-        setShowEditModal(false);
-        fetchEmployers(); // Refresh the list
-      } else {
-        // Attempt to read error message from response body
-        const errorData = await res.json();
-        setEditError(errorData.message || `Cập nhật thất bại: ${res.status}`);
-      }
-    } catch (error) {
-      console.error("Error updating company:", error);
-      setEditError(error.message || "Cập nhật thất bại.");
-    }
-  };
 
   // Lấy danh sách industry duy nhất từ employers
-  const industryList = Array.from(new Set(employers.map(e => e.IndustryId).filter(Boolean)));
+  const industryList = Array.from(new Set(employers.map(e => e.IndustryName).filter(Boolean)));
   // Lấy danh sách team size mẫu
   const teamSizeOptions = [
     { label: 'All', value: 'all' },
@@ -206,7 +131,7 @@ const EmployerManagement = () => {
       else if (filterTeamSize === '501+') matchTeamSize = num >= 501;
     }
     // Industry
-    const matchIndustry = filterIndustry === 'all' || emp.IndustryId === filterIndustry;
+    const matchIndustry = filterIndustry === 'all' || emp.IndustryName === filterIndustry;
     return matchSearch && matchStatus && matchTeamSize && matchIndustry;
   });
 
@@ -219,8 +144,8 @@ const EmployerManagement = () => {
 
   // Helper để lấy tên ngành từ id
   const getIndustryName = (id) => {
-    const found = industries.find(ind => ind.industryId === id);
-    return found ? found.industryName : id;
+    const found = industries.find(ind => ind.IndustryName === id);
+    return found ? found.IndustryName : id;
   };
 
   return (
@@ -346,7 +271,7 @@ const EmployerManagement = () => {
                                 <div className="employer-meta">
                                   <span><i className="fa fa-map-marker-alt" style={{marginRight:4}}></i> {emp.Location}</span>
                                   <span><i className="fa fa-users" style={{marginRight:4}}></i> {emp.TeamSize}</span>
-                                  <span><i className="fa fa-briefcase" style={{marginRight:4}}></i> {getIndustryName(emp.IndustryId)}</span>
+                                  <span><i className="fa fa-briefcase" style={{marginRight:4}}></i> {getIndustryName(emp.IndustryName)}</span>
                                   {emp.IsVerified ? (
                                     <span className="badge bg-success">Verified</span>
                                   ) : (
@@ -361,7 +286,6 @@ const EmployerManagement = () => {
                                 <button className="btn btn-sm me-1" onClick={() => handleVerify(emp.Id)}>Approve</button>
                               )}
                               <button className="btn btn-sm" onClick={() => handleToggleLock(emp.Id, emp.IsLocked)}>{emp.IsLocked ? "Unlock" : "Lock"}</button>
-                              <button className="btn btn-sm me-1" onClick={() => handleShowEdit(emp)}>Edit</button>
                             </div>
                           </div>
                         ))
@@ -412,7 +336,7 @@ const EmployerManagement = () => {
                 <p><b>Email/Phone:</b> {selectedEmployer.Contact}</p>
                 <p><b>Description:</b> {selectedEmployer.companyProfileDescription}</p>
                 <p><b>Status:</b> {selectedEmployer.IsVerified ? "Verified" : "Pending Approval"}</p>
-                <p><b>Industry:</b> {getIndustryName(selectedEmployer.IndustryId)}</p>
+                <p><b>Industry:</b> {getIndustryName(selectedEmployer.IndustryName)}</p>
               </div>
               <div className="modal-footer">
                 <button className="btn btn-secondary" onClick={()=>setShowDetailModal(false)}>Close</button>
@@ -421,89 +345,7 @@ const EmployerManagement = () => {
           </div>
         </div>
       )}
-      {showEditModal && editEmployer && (
-        <div className="modal show" style={{display:'block'}}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <form onSubmit={handleEditSubmit}>
-                <div className="modal-header">
-                  <h5 className="modal-title">Edit Company</h5>
-                  <button className="btn-close" onClick={()=>setShowEditModal(false)} type="button"></button>
-                </div>
-                <div className="modal-body">
-                  {editError && <div className="alert alert-danger">{editError}</div>}
-                  <div className="mb-2">
-                    <label>Company Name</label>
-                    <input className="form-control" name="CompanyName" value={editEmployer.CompanyName} onChange={handleEditChange} required />
-                  </div>
-                  <div className="mb-2">
-                    <label>Description</label>
-                    <textarea className="form-control" name="companyProfileDescription" value={editEmployer.companyProfileDescription || ''} onChange={handleEditChange} />
-                  </div>
-                  <div className="mb-2">
-                    <label>Location</label>
-                    <input className="form-control" name="Location" value={editEmployer.Location} onChange={handleEditChange} />
-                  </div>
-                  <div className="mb-2">
-                    <label>Website</label>
-                    <input className="form-control" name="Website" value={editEmployer.Website} onChange={handleEditChange} />
-                  </div>
-                  <div className="mb-2">
-                    <label>Team Size</label>
-                    <input className="form-control" name="TeamSize" value={editEmployer.TeamSize} onChange={handleEditChange} />
-                  </div>
-                  <div className="mb-2">
-                    <label>Industry</label>
-                    <input className="form-control" name="IndustryId" value={editEmployer.IndustryId} onChange={handleEditChange} />
-                  </div>
-                  <div className="mb-2">
-                    <label>Contact</label>
-                    <input className="form-control" name="Contact" value={editEmployer.Contact} onChange={handleEditChange} required />
-                  </div>
-                  <div className="mb-2">
-                    <label>Company Logo (Normal)</label>
-                    <input
-                      className="form-control"
-                      type="file"
-                      name="logoFile"
-                      onChange={handleEditChange}
-                      accept="image/*"
-                    />
-                    {(selectedCompanyImageFile || editEmployer?.UrlCompanyLogo) && (
-                      <img
-                        src={selectedCompanyImageFile ? URL.createObjectURL(selectedCompanyImageFile) : editEmployer?.UrlCompanyLogo}
-                        alt="Company Logo Preview (Normal)"
-                        style={{ width: '100px', height: '100px', objectFit: 'contain', marginTop: '10px', borderRadius: '12px', background:'#eee' }}
-                      />
-                    )}
-                  </div>
-                  <div className="mb-2">
-                    <label>Company Logo (Large)</label>
-                    <input
-                      className="form-control"
-                      type="file"
-                      name="logoLgrFile"
-                      onChange={handleEditChange}
-                      accept="image/*"
-                    />
-                    {(selectedCompanyLgrImageFile || editEmployer?.ImageLogoLgr) && (
-                      <img
-                        src={selectedCompanyLgrImageFile ? URL.createObjectURL(selectedCompanyLgrImageFile) : editEmployer?.ImageLogoLgr}
-                        alt="Company Logo Preview (Large)"
-                        style={{ width: '100px', height: '100px', objectFit: 'contain', marginTop: '10px', borderRadius: '12px', background:'#eee' }}
-                      />
-                    )}
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button className="btn btn-secondary" type="button" onClick={()=>setShowEditModal(false)}>Cancel</button>
-                  <button className="btn btn-primary" type="submit">Save</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 };

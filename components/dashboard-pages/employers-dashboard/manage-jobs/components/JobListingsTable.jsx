@@ -35,6 +35,7 @@ const JobListingsTable = () => {
     status: ''
   });
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isStatusSelectDisabled, setIsStatusSelectDisabled] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -65,6 +66,8 @@ const JobListingsTable = () => {
           jobTypes: jobTypesResponse,
           experienceLevels: experienceLevelsResponse
         });
+
+        console.log('Raw jobs data from API:', jobsResponse.data);
 
         // Filter jobs for current company
         const filteredJobs = jobsResponse.data.filter(job => job.companyId === parseInt(userId));
@@ -108,6 +111,40 @@ const JobListingsTable = () => {
     console.log('Selected job:', job);
     setSelectedJob(job);
 
+    // Lấy dữ liệu address detail thô từ các trường có thể có
+    const rawAddressDetail = job.addressDetail || job.address || job.location || '';
+    let cleanedAddressDetail = rawAddressDetail;
+
+    // Thử làm sạch chuỗi: Loại bỏ ProvinceName nếu nó xuất hiện ở cuối chuỗi Address Detail
+    // Cách này giả định định dạng là "Địa chỉ chi tiết, Quận/Huyện, Tỉnh/Thành phố"
+    if (job.provinceName && cleanedAddressDetail.endsWith(`, ${job.provinceName}`)) {
+        // Tìm vị trí bắt đầu của ProvinceName và cắt bỏ nó
+        const provinceIndex = cleanedAddressDetail.lastIndexOf(`, ${job.provinceName}`);
+        cleanedAddressDetail = cleanedAddressDetail.substring(0, provinceIndex).trim();
+
+        // Sau khi cắt tỉnh, có thể vẫn còn Quận/Huyện. Tùy thuộc vào yêu cầu, có thể cần xử lý thêm.
+        // Hiện tại chỉ cắt Tỉnh/Thành phố.
+    } else if (job.provinceName && cleanedAddressDetail.endsWith(job.provinceName)) {
+         // Trường hợp không có dấu phẩy trước tỉnh
+        const provinceIndex = cleanedAddressDetail.lastIndexOf(job.provinceName);
+         // Đảm bảo không cắt nhầm nếu tên tỉnh là một phần của địa chỉ chi tiết
+         if (provinceIndex > 0 && cleanedAddressDetail[provinceIndex - 1].match(/[^a-zA-Z0-9]/)) { // Kiểm tra ký tự không phải chữ/số trước tên tỉnh
+             cleanedAddressDetail = cleanedAddressDetail.substring(0, provinceIndex).trim();
+         }
+    }
+
+    let initialStatusForForm = "Inactive"; // Giá trị mặc định nếu không khớp
+    if (job.status === 0) { // Nếu status từ backend là 0 (Pending)
+        initialStatusForForm = "Pending";
+    } else if (job.status === 1) { // Nếu status từ backend là 1 (Active)
+        initialStatusForForm = "Active";
+    } else if (job.status === 2) { // Nếu status từ backend là 2 (Inactive)
+        initialStatusForForm = "Inactive";
+    }
+
+    // Disable status select if job is Pending (status 0)
+    setIsStatusSelectDisabled(job.status === 0);
+
     setEditForm({
       title: job.jobTitle || '',
       description: job.description || '',
@@ -120,8 +157,8 @@ const JobListingsTable = () => {
       timeStart: job.timeStart ? job.timeStart.split('T')[0] : '',
       timeEnd: job.timeEnd ? job.timeEnd.split('T')[0] : '',
       provinceName: job.provinceName || '',
-      addressDetail: job.addressDetail || job.address || job.location || '',
-      status: job.status === 1 ? "Active" : "Inactive"
+      addressDetail: cleanedAddressDetail,
+      status: initialStatusForForm // Gán giá trị đã map đúng (bao gồm cả Pending)
     });
     setIsEditModalOpen(true);
   };
@@ -138,6 +175,18 @@ const JobListingsTable = () => {
     e.preventDefault();
     try {
       console.log("Giá trị status trong form:", editForm.status);
+      let statusToSendToBackend;
+      if (editForm.status === "Pending") {
+          statusToSendToBackend = 0; // Ánh xạ chuỗi "Pending" sang số 0
+      } else if (editForm.status === "Active") {
+          statusToSendToBackend = 1; // Ánh xạ chuỗi "Active" sang số 1
+      } else if (editForm.status === "Inactive") {
+          statusToSendToBackend = 2; // Ánh xạ chuỗi "Inactive" sang số 2
+      } else {
+          console.error("Trạng thái không hợp lệ:", editForm.status);
+          throw new Error("Trạng thái không hợp lệ");
+      }
+
       const updatedJob = {
         ...selectedJob,
         title: editForm.title,
@@ -152,7 +201,7 @@ const JobListingsTable = () => {
         timeEnd: new Date(editForm.timeEnd).toISOString(),
         provinceName: editForm.provinceName,
         addressDetail: editForm.addressDetail,
-        status: editForm.status === "Active" ? 1 : 0,
+        status: statusToSendToBackend,
         companyId: selectedJob.companyId
       };
 
@@ -254,7 +303,15 @@ const JobListingsTable = () => {
                     {formatDateVN(job.timeEnd)}
                   </td>
                   <td className="status">
-                    {job.status === 1 ? "Active" : job.status === 0 ? "Inactive" : job.status}
+                    {job.status === 0 ? (
+                      <span className="status-pending">Pending</span>
+                    ) : job.status === 1 ? (
+                      <span className="status-active">Active</span>
+                    ) : job.status === 2 ? (
+                      <span className="status-inactive">Inactive</span>
+                    ) : (
+                      job.status
+                    )}
                   </td>
                   <td>
                     <div className="option-box">
@@ -486,10 +543,15 @@ const JobListingsTable = () => {
                   value={editForm.status}
                   onChange={handleInputChange}
                   required
+                  disabled={isStatusSelectDisabled}
                 >
+                  {editForm.status === "Pending" && <option value="Pending">Pending</option>}
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
                 </select>
+                {isStatusSelectDisabled && (
+                  <small className="form-text text-danger">You do not have permission to change when the job is in Pending status.</small>
+                )}
               </div>
 
               <div className="modal-footer">

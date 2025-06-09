@@ -95,4 +95,25 @@
 
 .modal-footer button:hover {
   opacity: 0.9;
-} 
+}
+
+/* CSS cho trạng thái Active (xanh lá cây) */
+.status-active {
+  color: #28a745; /* Màu xanh lá cây phổ biến */
+  font-weight: 500; /* Để chữ đậm hơn một chút */
+}
+
+/* CSS cho trạng thái Inactive (đỏ) */
+.status-inactive {
+  color: #dc3545; /* Màu đỏ phổ biến */
+  font-weight: 500;
+}
+
+/* CSS cho trạng thái Pending (xanh nước biển) */
+.status-pending {
+  color: #007bff; /* Màu xanh nước biển phổ biến */
+  font-weight: 500;
+}
+
+/* Bạn có thể cần thêm các class CSS khác tùy thuộc vào cấu trúc HTML và thiết kế tổng thể */
+/* Ví dụ, nếu text không nằm trong span, bạn có thể áp dụng màu cho thẻ td hoặc div chứa */ 

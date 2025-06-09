@@ -214,7 +214,6 @@ const PostBoxForm = () => {
       postFormData.append('ExperienceLevelId', formData.experienceLevelId);
       postFormData.append('TimeStart', formData.timeStart);
       postFormData.append('TimeEnd', formData.timeEnd);
-      postFormData.append('Status', 0);
       postFormData.append('ProvinceName', formData.provinceName);
       postFormData.append('AddressDetail', formData.addressDetail);
 

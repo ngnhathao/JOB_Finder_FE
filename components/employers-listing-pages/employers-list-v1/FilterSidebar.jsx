@@ -21,15 +21,27 @@ const FilterSidebar = () => {
         const fetchLookupData = async () => {
             try {
                 setLoadingLookupData(true);
+                const token = localStorage.getItem('token');
                 const [provincesRes, industriesRes] = await Promise.all([
                     fetch("https://provinces.open-api.vn/api/").then(res => res.json()), // Fetch provinces
-                    fetch("/api/Industry").then(res => res.json()), // Fetch industries
+                    fetch("https://localhost:7266/api/Industry", {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }).then(async res => {
+                        if (!res.ok) {
+                            const errorData = await res.json().catch(() => ({}));
+                            throw new Error(errorData.message || `HTTP error! status: ${res.status}`);
+                        }
+                        return res.json();
+                    })
                 ]);
                 setFetchedProvinces(provincesRes);
                 setFetchedIndustries(industriesRes);
                 console.log('Employer Filter Sidebar Lookup Data:', { provincesRes, industriesRes });
             } catch (err) {
-                setLookupDataError('Failed to fetch lookup data in sidebar');
+                setLookupDataError(err.message || 'Failed to fetch lookup data in sidebar');
                 console.error('Failed to fetch lookup data in FilterSidebar', err);
             } finally {
                 setLoadingLookupData(false);

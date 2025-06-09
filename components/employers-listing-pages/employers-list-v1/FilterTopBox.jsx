@@ -40,12 +40,22 @@ const FilterTopBox = () => {
   useEffect(() => {
     const fetchIndustries = async () => {
       try {
-        const res = await fetch("/api/Industry");
-      if (!res.ok) throw new Error("Failed to fetch industries");
+        const token = localStorage.getItem('token');
+        const res = await fetch("https://localhost:7266/api/Industry", {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.message || `HTTP error! status: ${res.status}`);
+        }
         const industriesData = await res.json();
         setIndustries(industriesData);
       } catch (err) {
         console.error("Error fetching industries:", err);
+        setError(err.message || "Failed to fetch industries");
       }
     };
     fetchIndustries();
@@ -90,9 +100,14 @@ const FilterTopBox = () => {
         // if (sort) params.append("SortBy", sort); // Assuming sort value maps to API parameter
 
         console.log('Fetching companies with params:', params.toString());
-        const url = `/api/CompanyProfile/filter?${params.toString()}`;
+        const url = `https://localhost:7266/api/CompanyProfile/filter?${params.toString()}`;
         console.log('Fetching URL:', url); // Log the full URL
-        const res = await fetch(url);
+        const res = await fetch(url, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        });
 
         console.log('Response status:', res.status); // Log response status
         if (!res.ok) throw new Error(`Failed to fetch companies: ${res.status}`);

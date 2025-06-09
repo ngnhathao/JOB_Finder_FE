@@ -1,4 +1,3 @@
-
 'use client'
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -45,7 +44,7 @@ export default function JobSelect() {
                         <select
                             onChange={jobTypeHandler}
                             className="chosen-single form-select"
-                            value={jobList?.jobTypeSelect}
+                            value={jobList?.jobTypeSelect || ""}
                         >
                             <option value="">Job Type</option>
                             {jobTypeList?.map((item) => (

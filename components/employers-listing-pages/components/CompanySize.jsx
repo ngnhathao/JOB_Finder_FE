@@ -5,26 +5,19 @@ import { addCompanySize } from "../../../features/filter/employerFilterSlice";
 import { useEffect, useState } from "react";
 
 const CompanySize = () => {
-    const { employerFilter } = useSelector((state) => state);
-    const [getCompanySize, setCompanySize] = useState(employerFilter.companySize);
+    const { companySize } = useSelector((state) => state.employerFilter) || {};
     const dispatch = useDispatch();
 
     // company size handler
     const companySizeHandler = (e) => {
         const value = e.target.value;
-        setCompanySize(value);
         dispatch(addCompanySize(value));
     };
-
-    // Update local state when employerFilter.companySize changes (e.g., when clearing filters)
-    useEffect(() => {
-        setCompanySize(employerFilter.companySize);
-    }, [employerFilter.companySize]);
 
   return (
     <>
       <select className="form-select"
-              value={getCompanySize}
+              value={companySize || ""}
               onChange={companySizeHandler}>
         <option value="">Choose Company Size</option>
         <option value="50 - 100">50 - 100</option>

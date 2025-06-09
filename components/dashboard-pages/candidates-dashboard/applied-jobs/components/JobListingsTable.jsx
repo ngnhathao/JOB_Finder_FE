@@ -15,9 +15,8 @@ const JobListingsTable = () => {
       try {
         setLoading(true);
         const response = await jobService.getAppliedJobs();
-        // Lọc chỉ lấy job đã được approve
-        const approvedJobs = response.filter(job => job.status === 1);
-        setAppliedJobs(approvedJobs);
+        // Show all jobs regardless of status
+        setAppliedJobs(response);
         setError(null);
       } catch (err) {
         console.error('Error fetching applied jobs:', err);

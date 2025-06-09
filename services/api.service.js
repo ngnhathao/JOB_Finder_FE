@@ -1,6 +1,6 @@
 import API_CONFIG from '../config/api.config';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7266/api';
+const BASE_URL = 'https://localhost:7266/api';
 
 
 // Định nghĩa class trước

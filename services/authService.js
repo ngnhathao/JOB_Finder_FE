@@ -5,14 +5,21 @@ export const authService = {
   async login(email, password) {
     try {
       const data = await ApiService.login(email, password);
-      // Lưu token và role (và tên nếu có) vào cookies
-      Cookies.set('token', data.token, { expires: 7 }); // Lưu 7 ngày
-      Cookies.set('role', data.role, { expires: 7 });
+      // Lưu token và role (và tên nếu có) vào cookies với domain và path phù hợp
+      const cookieOptions = {
+        expires: 7, // 7 days
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'Lax'
+      };
+
+      Cookies.set('token', data.token, cookieOptions);
+      Cookies.set('role', data.role, cookieOptions);
       if (data.name) {
-        Cookies.set('name', data.name, { expires: 7 });
+        Cookies.set('name', data.name, cookieOptions);
       }
       if (data.companyId) {
-        Cookies.set('companyId', data.companyId, { expires: 7 });
+        Cookies.set('companyId', data.companyId, cookieOptions);
       }
       return data;
     } catch (error) {

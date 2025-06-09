@@ -1,4 +1,5 @@
 import axios from "axios";
+import Cookies from 'js-cookie';
 
 const API_URL = "https://localhost:7266/api";
 
@@ -412,6 +413,45 @@ export const jobService = {
     }
   },
 
+  async getAppliedJobs() {
+    try {
+      // Try to get token from cookies first
+      let token = Cookies.get('token');
+      
+      // If not in cookies, try localStorage as fallback
+      if (!token) {
+        token = localStorage.getItem('token');
+      }
+
+      console.log('Token status:', token ? 'exists' : 'missing');
+      
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      console.log('Making request to:', `${API_URL}/Application/my-applications`);
+      const response = await axios.get(`${API_URL}/Application/my-applications`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true // Enable sending cookies with the request
+      });
+      
+      console.log('Response from applied jobs:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching applied jobs:", error);
+      if (error.response) {
+        console.error("Error response data:", error.response.data);
+        console.error("Error response status:", error.response.status);
+      }
+      throw error;
+    }
+  },
+
 };
+
+export default jobService;
 
 

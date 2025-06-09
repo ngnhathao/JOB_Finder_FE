@@ -12,6 +12,7 @@ import employerMenuData from "../../data/employerMenuData";
 import { isActiveLink } from "../../utils/linkActiveChecker";
 import candidatesMenuData from "../../data/candidatesMenuData";
 import adminMenuData from "../../data/adminMenuData";
+import BecomeRecruiterModal from '../common/form/shared/BecomeRecruiterModal';
 
 
 
@@ -26,6 +27,8 @@ const DefaulHeader2 = () => {
 
   const { isLoggedIn, user, role } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
+
+  const [openRecruiterModal, setOpenRecruiterModal] = useState(false);
 
   const changeBackground = () => {
     if (typeof window !== 'undefined' && window.scrollY >= 10) {
@@ -142,7 +145,46 @@ const DefaulHeader2 = () => {
 
         <div className="outer-box">
           {isLoggedIn ? (
-            <div className="logged-in-info">
+            <div className="logged-in-info" style={{display: 'flex', alignItems: 'center', gap: '16px'}}>
+              {role === 'Candidate' && (
+                <>
+                  <button
+                    type="button"
+                    className="become-recruiter-btn"
+                    style={{
+                      marginRight: '12px',
+                      background: '#f1f6fd',
+                      color: '#1967d2',
+                      borderRadius: '8px',
+                      padding: '6px 18px',
+                      fontWeight: 500,
+                      fontSize: '15px',
+                      transition: 'background 0.2s, color 0.2s',
+                      border: 'none',
+                      display: 'inline-block',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      textDecoration: 'none',
+                    }}
+                    onMouseOver={e => {
+                      e.currentTarget.style.background = '#0a4ba1';
+                      e.currentTarget.style.color = '#fff';
+                    }}
+                    onMouseOut={e => {
+                      e.currentTarget.style.background = '#f1f6fd';
+                      e.currentTarget.style.color = '#1967d2';
+                    }}
+                    onClick={() => setOpenRecruiterModal(true)}
+                  >
+                    Become Recruiter
+                  </button>
+                  <BecomeRecruiterModal
+                    open={openRecruiterModal}
+                    onCancel={() => setOpenRecruiterModal(false)}
+                    userId={userInfo.id || userInfo.userId || userInfo._id || userInfo.uid || user}
+                  />
+                </>
+              )}
               {role === 'Company' && (
                 <div className="dropdown dashboard-option">
                   <a className="dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">

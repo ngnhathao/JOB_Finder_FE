@@ -34,7 +34,7 @@ const Categories = ({ industries, onSelectIndustry }) => {
                 <option value="">Choose an Industry</option>
                 {/* Sử dụng industries từ state để render options */}
                 {industries?.map((item) => (
-                    <option key={item.id} value={item.id}> 
+                    <option key={item.industryId} value={item.industryId}> 
                         {item.industryName}
                     </option>
                 ))}

@@ -17,8 +17,7 @@ const EmployerManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const employersPerPage = 10;
   const [filterStatus, setFilterStatus] = useState('all');
-  const [filterTeamSize, setFilterTeamSize] = useState('all');
-  const [filterIndustry, setFilterIndustry] = useState('all');
+  const [filterLock, setFilterLock] = useState('all');
   const [industries, setIndustries] = useState([]);
   const [selectedCompanyImageFile, setSelectedCompanyImageFile] = useState(null);
   const [selectedCompanyLgrImageFile, setSelectedCompanyLgrImageFile] = useState(null);
@@ -31,8 +30,10 @@ const EmployerManagement = () => {
   const fetchIndustries = async () => {
     try {
       const data = await ApiService.getMasterData('INDUSTRIES');
+      console.log('Fetched industries:', data);
       setIndustries(data);
     } catch (error) {
+      console.error('Error fetching industries:', error);
       setIndustries([]);
     }
   };
@@ -41,6 +42,7 @@ const EmployerManagement = () => {
     try {
       setLoading(true);
       const data = await ApiService.getCompanies();
+      console.log('Raw API data for employers:', data);
       // Map API fields to FE fields
       const mapped = data.map((item) => ({
         Id: item.userId,
@@ -54,7 +56,8 @@ const EmployerManagement = () => {
         Website: item.website,
         Contact: item.contact,
         IndustryId: item.industryId || '',
-        IndustryName: item.industryName || '',
+
+        IndustryName: item.industryName || 'N/A',
         IsLocked: !item.isActive
       }));
       setEmployers(mapped);
@@ -66,18 +69,12 @@ const EmployerManagement = () => {
     }
   };
 
-  const handleShowDetail = (employer) => {
-    setSelectedEmployer(employer);
-    setShowDetailModal(true);
-  };
-
   const handleVerify = async (employerId) => {
     try {
-      await ApiService.request(
-        `CompanyProfile/${employerId}/Verify`,
-        'PUT'
-      );
-      setAlertMsg("Account verified!");
+
+      await ApiService.verifyCompany(employerId);
+      setAlertMsg("Company verified!");
+
       fetchEmployers();
     } catch (error) {
       console.error('Error verifying employer:', error);
@@ -91,7 +88,7 @@ const EmployerManagement = () => {
         `CompanyProfile/${employerId}/${isLocked ? "unlock" : "lock"}`,
         'PUT'
       );
-      setAlertMsg(isLocked ? "Account unlocked." : "Account locked.");
+      setAlertMsg(isLocked ? "Company unlocked." : "Company locked.");
       fetchEmployers();
     } catch (error) {
       console.error('Error toggling lock:', error);
@@ -111,6 +108,7 @@ const EmployerManagement = () => {
     { label: '501+', value: '501+' },
   ];
 
+
   // Filter nâng cao
   const filteredEmployers = employers.filter(emp => {
     // Search
@@ -120,19 +118,14 @@ const EmployerManagement = () => {
     const matchStatus = filterStatus === 'all' ||
       (filterStatus === 'verified' && emp.IsVerified) ||
       (filterStatus === 'pending' && !emp.IsVerified);
-    // Team size
-    let matchTeamSize = true;
-    if (filterTeamSize !== 'all') {
-      const size = emp.TeamSize?.replace(/\D/g, '') || '';
-      const num = parseInt(size);
-      if (filterTeamSize === '1-50') matchTeamSize = num >= 1 && num <= 50;
-      else if (filterTeamSize === '51-200') matchTeamSize = num >= 51 && num <= 200;
-      else if (filterTeamSize === '201-500') matchTeamSize = num >= 201 && num <= 500;
-      else if (filterTeamSize === '501+') matchTeamSize = num >= 501;
-    }
-    // Industry
-    const matchIndustry = filterIndustry === 'all' || emp.IndustryName === filterIndustry;
-    return matchSearch && matchStatus && matchTeamSize && matchIndustry;
+
+
+    // Lock Status Filter Logic
+    const matchLock = filterLock === 'all' || 
+                      (filterLock === 'locked' ? emp.IsLocked === true : emp.IsLocked === false);
+
+    return matchSearch && matchStatus && matchLock;
+
   });
 
   // Pagination
@@ -140,12 +133,16 @@ const EmployerManagement = () => {
   const paginatedEmployers = filteredEmployers.slice((currentPage-1)*employersPerPage, currentPage*employersPerPage);
 
   // Reset page về 1 khi filter/search thay đổi
-  useEffect(() => { setCurrentPage(1); }, [search, filterStatus, filterTeamSize, filterIndustry]);
+  useEffect(() => { setCurrentPage(1); }, [search, filterStatus, filterLock]);
 
   // Helper để lấy tên ngành từ id
   const getIndustryName = (id) => {
-    const found = industries.find(ind => ind.IndustryName === id);
-    return found ? found.IndustryName : id;
+
+    console.log('Getting name for industry ID:', id);
+    const found = industries.find(ind => ind.industryId === id);
+    console.log('Found industry:', found);
+    return found ? found.industryName : id;
+
   };
 
   return (
@@ -213,6 +210,31 @@ const EmployerManagement = () => {
           transform: scale(1.05);
           transition: all 0.18s;
         }
+        /* Removed default border for small buttons */
+        /* .btn.btn-sm { */
+        /*   border: 1px solid #ccc; */ /* Example default border */
+        /* } */
+        .lock-toggle-btn {
+          border: 1px solid #ccc; /* Default border color */
+          background: #fff; /* White background */
+          color: #777; /* Grey text color */
+          /* Removed hover/focus styles */
+        }
+        .lock-toggle-btn:hover, .lock-toggle-btn:focus { /* Add hover/focus styles */
+          background: #f5f7fa; /* Light blue-grey background on hover/focus */
+          border-color: #1967d2; /* Blue border on hover/focus */
+          color: #1967d2; /* Blue text on hover/focus */
+          box-shadow: 0 2px 8px rgba(25,103,210,0.08);
+          transform: scale(1.05);
+          transition: all 0.18s;
+        }
+        /* Added styles for company name link */
+        .employer-info div a {
+          color: #333; /* Default color (dark grey/black) */
+        }
+        .employer-info div a:hover {
+          color: #1967d2; /* Blue color on hover */
+        }
       `}</style>
       <span className="header-span"></span>
       <DashboardHeader />
@@ -245,12 +267,10 @@ const EmployerManagement = () => {
                       <option value="verified">Verified</option>
                       <option value="pending">Pending</option>
                     </select>
-                    <select className="form-select form-select-sm" style={{width:120}} value={filterTeamSize} onChange={e=>setFilterTeamSize(e.target.value)}>
-                      {teamSizeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                    </select>
-                    <select className="form-select form-select-sm" style={{width:140}} value={filterIndustry} onChange={e=>setFilterIndustry(e.target.value)}>
-                      <option value="all">All Industries</option>
-                      {industryList.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+                    <select className="form-select form-select-sm" style={{width:120}} value={filterLock} onChange={e=>setFilterLock(e.target.value)}>
+                      <option value="all">All Status Lock</option>
+                      <option value="locked">Locked</option>
+                      <option value="unlocked">Unlocked</option>
                     </select>
                   </div>
                 </div>
@@ -267,11 +287,17 @@ const EmployerManagement = () => {
                             <div className="employer-info">
                               <img className="employer-logo" src={emp.UrlCompanyLogo || emp.ImageLogoLgr} alt="logo" />
                               <div>
-                                <div style={{fontWeight:600, fontSize:20, marginBottom:4}}>{emp.CompanyName}</div>
+                                <div style={{fontWeight:600, fontSize:20, marginBottom:4}}>
+                                  <a href={`/employers-single-v1/${emp.Id}`} style={{textDecoration: 'none', cursor: 'pointer'}}>
+                                    {emp.CompanyName}
+                                  </a>
+                                </div>
                                 <div className="employer-meta">
                                   <span><i className="fa fa-map-marker-alt" style={{marginRight:4}}></i> {emp.Location}</span>
                                   <span><i className="fa fa-users" style={{marginRight:4}}></i> {emp.TeamSize}</span>
-                                  <span><i className="fa fa-briefcase" style={{marginRight:4}}></i> {getIndustryName(emp.IndustryName)}</span>
+
+                                  <span><i className="fa fa-briefcase" style={{marginRight:4}}></i> {emp.IndustryName}</span>
+
                                   {emp.IsVerified ? (
                                     <span className="badge bg-success">Verified</span>
                                   ) : (
@@ -281,11 +307,13 @@ const EmployerManagement = () => {
                               </div>
                             </div>
                             <div className="employer-actions">
-                              <button className="btn btn-sm me-1" onClick={() => handleShowDetail(emp)}>View Profile</button>
+                              {/* Removed View Profile and Edit buttons */}
                               {!emp.IsVerified && (
                                 <button className="btn btn-sm me-1" onClick={() => handleVerify(emp.Id)}>Approve</button>
                               )}
-                              <button className="btn btn-sm" onClick={() => handleToggleLock(emp.Id, emp.IsLocked)}>{emp.IsLocked ? "Unlock" : "Lock"}</button>
+
+                              <button className="btn btn-sm lock-toggle-btn" onClick={() => handleToggleLock(emp.Id, emp.IsLocked)}>{emp.IsLocked ? "Unlock" : "Lock"}</button>
+
                             </div>
                           </div>
                         ))
@@ -316,6 +344,7 @@ const EmployerManagement = () => {
           </div>
         </div>
       </section>
+
       {/* Company Profile Modal */}
       {showDetailModal && selectedEmployer && (
         <div className="modal show" style={{display:'block'}}>
@@ -345,6 +374,7 @@ const EmployerManagement = () => {
           </div>
         </div>
       )}
+
 
     </div>
   );

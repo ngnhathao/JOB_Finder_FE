@@ -24,7 +24,28 @@ import {
 } from "../../../features/job/jobSlice";
 import Image from "next/image";
 import { jobService } from "../../../services/jobService";
+import { toast } from "react-toastify";
+import "./FilterJobsBox.css"; // Thêm import CSS
 
+// Thêm CSS styles
+const styles = {
+  bookmarkBtn: {
+    position: 'absolute',
+    right: '20px',
+    top: '20px',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '5px',
+    transition: 'all 0.3s ease',
+  },
+  bookmarkBtnActive: {
+    color: '#ff5a5f',
+  },
+  bookmarkIcon: {
+    fontSize: '20px',
+  }
+};
 
 const FilterJobsBox = () => {
   const [jobs, setJobs] = useState([]);
@@ -56,6 +77,9 @@ const FilterJobsBox = () => {
 
   const { sort } = jobSort;
   const dispatch = useDispatch();
+
+  const [bookmarkedCompanies, setBookmarkedCompanies] = useState([]);
+  const [isLoadingBookmarks, setIsLoadingBookmarks] = useState(false);
 
   // Fetch jobs khi filters hoặc pagination thay đổi
   useEffect(() => {
@@ -131,6 +155,23 @@ const FilterJobsBox = () => {
 
     fetchJobs();
   }, [keyword, location, destination, category, jobType, datePosted, experience, salary, tag, sort, currentPage, itemsPerPage]);
+
+  // Thêm useEffect để lấy danh sách công ty đã bookmark
+  useEffect(() => {
+    const fetchFavoriteCompanies = async () => {
+      try {
+        setIsLoadingBookmarks(true);
+        const favorites = await jobService.getFavoriteCompanies();
+        // Ép kiểu userId về number để so sánh chính xác
+        setBookmarkedCompanies(favorites.map(company => Number(company.userId)));
+      } catch (error) {
+        console.error("Error fetching favorite companies:", error);
+      } finally {
+        setIsLoadingBookmarks(false);
+      }
+    };
+    fetchFavoriteCompanies();
+  }, []);
 
   // Helper function để tìm tên từ ID trong dữ liệu lookup
   const getCompanyName = (companyId) => {
@@ -213,6 +254,33 @@ const FilterJobsBox = () => {
     setDisplayCount(prev => prev + 10);
   };
 
+  // Cập nhật hàm xử lý bookmark
+  const handleBookmark = async (companyId) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error("Vui lòng đăng nhập để sử dụng tính năng này");
+        return;
+      }
+      const id = Number(companyId);
+      if (bookmarkedCompanies.includes(id)) {
+        await jobService.unfavoriteCompany(id);
+        setBookmarkedCompanies(prev => prev.filter(cid => cid !== id));
+        toast.success("Đã xóa khỏi danh sách yêu thích");
+      } else {
+        await jobService.favoriteCompany(id);
+        setBookmarkedCompanies(prev => [...prev, id]);
+        toast.success("Đã thêm vào danh sách yêu thích");
+      }
+    } catch (error) {
+      console.error("Error handling bookmark:", error);
+      if (error.response?.status === 401) {
+        toast.error("Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại");
+      } else {
+        toast.error("Có lỗi xảy ra khi xử lý yêu thích");
+      }
+    }
+  };
 
   let content = jobs
     ?.filter(item => item.status === 1)
@@ -282,11 +350,25 @@ const FilterJobsBox = () => {
 
              </ul>
 
-            {/* Restored Bookmark button */}
-             <button className="bookmark-btn">
-               <span className="flaticon-bookmark"></span>
-             </button>
-
+            {/* Cập nhật Bookmark button */}
+            <button
+              className={`bookmark-btn ${bookmarkedCompanies.includes(Number(item.companyId)) ? 'active' : ''}`}
+              onClick={() => handleBookmark(item.companyId)}
+              disabled={isLoadingBookmarks}
+              style={{
+                position: 'absolute',
+                right: '20px',
+                top: '20px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '5px',
+                transition: 'all 0.3s ease',
+                color: bookmarkedCompanies.includes(Number(item.companyId)) ? '#ff5a5f' : '#666',
+              }}
+            >
+              <span className="flaticon-bookmark" style={{ fontSize: '20px' }}></span>
+            </button>
           </div>
         </div>
       </div>

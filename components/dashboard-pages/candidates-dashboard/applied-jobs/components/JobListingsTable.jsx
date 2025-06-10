@@ -6,36 +6,120 @@ import axios from "axios";
 import jobService from "@/services/jobService";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { jwtDecode } from "jwt-decode";
 
 const JobListingsTable = () => {
   const router = useRouter();
   const [appliedJobs, setAppliedJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [filteredJobs, setFilteredJobs] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [expandedJobId, setExpandedJobId] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
+
+  useEffect(() => {
+    // Get current user ID from token
+    const token = Cookies.get('token') || localStorage.getItem('token');
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setCurrentUserId(decoded.unique_name); // unique_name contains the user ID
+      } catch (error) {
+        console.error('Error decoding token:', error);
+        setError('Failed to authenticate user');
+      }
+    } else {
+      setError('No authentication token found');
+    }
+  }, []);
 
   useEffect(() => {
     const fetchAppliedJobs = async () => {
       try {
         setLoading(true);
         const response = await jobService.getAppliedJobs();
-        // Show all jobs regardless of status
         setAppliedJobs(response);
+        setFilteredJobs(response);
         setError(null);
       } catch (err) {
         console.error('Error fetching applied jobs:', err);
         setError('Failed to fetch applied jobs');
         setAppliedJobs([]);
+        setFilteredJobs([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAppliedJobs();
-  }, []);
+    if (currentUserId) {
+      fetchAppliedJobs();
+    }
+  }, [currentUserId]);
+
+  useEffect(() => {
+    // Filter jobs based on search term and status
+    let filtered = appliedJobs;
+    
+    if (searchTerm) {
+      filtered = filtered.filter(job => 
+        job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        job.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (job.addressDetail && job.addressDetail.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (job.provinceName && job.provinceName.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+
+    if (selectedStatus !== "all") {
+      filtered = filtered.filter(job => 
+        job.appliedCvs.some(cv => cv.status === parseInt(selectedStatus) && cv.userId === parseInt(currentUserId))
+      );
+    }
+
+    setFilteredJobs(filtered);
+  }, [searchTerm, selectedStatus, appliedJobs, currentUserId]);
 
   const handleJobClick = (jobId) => {
     router.push(`/job-single-v3/${jobId}`);
   };
+
+  const toggleJobExpansion = (jobId) => {
+    setExpandedJobId(expandedJobId === jobId ? null : jobId);
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 0: return "Pending";
+      case 1: return "Accepted";
+      case 2: return "Rejected";
+      default: return "Unknown";
+    }
+  };
+
+  const getStatusClass = (status) => {
+    switch (status) {
+      case 0: return "status-pending";
+      case 1: return "status-accepted";
+      case 2: return "status-rejected";
+      default: return "";
+    }
+  };
+
+  // Filter CVs for current user
+  const getUserCvs = (cvs) => {
+    return cvs.filter(cv => cv.userId === parseInt(currentUserId));
+  };
+
+  if (error && error.includes('authentication')) {
+    return (
+      <div className="alert alert-danger">
+        {error}
+        <br />
+        Please <Link href="/login">login</Link> to view your applied jobs.
+      </div>
+    );
+  }
 
   return (
     <div className="tabs-box">
@@ -43,108 +127,215 @@ const JobListingsTable = () => {
         <h4>My Applied Jobs</h4>
 
         <div className="chosen-outer">
-          {/* <!--Tabs Box--> */}
-          <select className="chosen-single form-select">
-            <option>Last 6 Months</option>
-            <option>Last 12 Months</option>
-            <option>Last 16 Months</option> 
-            <option>Last 24 Months</option>
-            <option>Last 5 year</option>
+          <div className="search-box">
+            <input
+              type="text"
+              placeholder="Search jobs..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="form-control"
+            />
+          </div>
+          <select 
+            className="chosen-single form-select"
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+          >
+            <option value="all">All Status</option>
+            <option value="0">Pending</option>
+            <option value="1">Accepted</option>
+            <option value="2">Rejected</option>
           </select>
         </div>
       </div>
-      {/* End filter top bar */}
 
-      {/* Start table widget content */}
       <div className="widget-content">
         {loading ? (
           <div>Loading...</div>
         ) : error ? (
           <div className="alert alert-danger">{error}</div>
-        ) : appliedJobs.length === 0 ? (
-          <div>No jobs applied yet.</div>
+        ) : filteredJobs.length === 0 ? (
+          <div>No jobs found.</div>
         ) : (
           <div className="table-outer">
-            <table className="default-table manage-job-table">
-              <thead>
-                <tr>
-                  <th>Job Title</th>
-                  <th>Salary</th>
-                  <th>Location</th>
-                  <th>Date Applied</th>
-                  <th>Status</th>
-                  <th>CV</th>
-                  <th>Cover Letter</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {appliedJobs.map((item) => (
-                  <tr key={item.applicationId}>
-                    <td>
-                      <div 
-                        className="job-title" 
-                        onClick={() => handleJobClick(item.job?.jobId)}
-                        style={{ 
-                          cursor: 'pointer',
-                          color: '#1967d2',
-                          fontWeight: '500',
-                          fontSize: '16px',
-                          lineHeight: '1.5',
-                          transition: 'all 0.3s ease',
-                          position: 'relative',
-                          display: 'inline-block'
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.color = '#0d47a1';
-                          e.currentTarget.style.transform = 'translateX(5px)';
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.color = '#1967d2';
-                          e.currentTarget.style.transform = 'translateX(0)';
-                        }}
-                      >
-                        {item.job?.title || "N/A"}
+            {filteredJobs.map((job) => {
+              const userCvs = getUserCvs(job.appliedCvs);
+              if (userCvs.length === 0) return null; // Skip jobs where user hasn't applied
+
+              return (
+                <div key={job.jobId} className="job-card">
+                  <div 
+                    className="job-header"
+                    onClick={() => toggleJobExpansion(job.jobId)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div className="job-title" onClick={(e) => {
+                      e.stopPropagation();
+                      handleJobClick(job.jobId);
+                    }}>
+                      {job.title}
+                    </div>
+                    <div className="job-info">
+                      
+                      <span>Location: {job.addressDetail || job.provinceName || "N/A"}</span>
+                    </div>
+                    <div className="expand-icon">
+                      {expandedJobId === job.jobId ? "▼" : "▶"}
+                    </div>
+                  </div>
+
+                  {expandedJobId === job.jobId && (
+                    <div className="job-details">
+                      <div className="description">
+                        <h5>Description:</h5>
+                        <p>{job.description}</p>
                       </div>
-                    </td>
-                    <td>
-                      {item.job?.salary ? item.job.salary.toLocaleString() : "N/A"}
-                    </td>
-                    <td>
-                      {item.job?.addressDetail || item.job?.provinceName || "N/A"}
-                    </td>
-                    <td>{new Date(item.submittedAt).toLocaleString()}</td>
-                    <td>
-                      {item.status === 0 ? "Pending" : item.status === 1 ? "Accepted" : "Rejected"}
-                    </td>
-                    <td>
-                      <a href={item.resumeUrl} target="_blank" rel="noopener noreferrer">
-                        View CV
-                      </a>
-                    </td>
-                    <td>{item.coverLetter}</td>
-                    <td>
-                      <div className="option-box">
-                        <ul className="option-list">
-                          <li>
-                            <a href={item.resumeUrl} target="_blank" rel="noopener noreferrer" data-text="View CV">
-                              <span className="la la-eye"></span>
-                            </a>
-                          </li>
-                          {/* Thêm các action khác nếu muốn */}
-                        </ul>
+                      
+                      <div className="applied-cvs">
+                        <h5>My Applied CVs:</h5>
+                        <table className="default-table">
+                          <thead>
+                            <tr>
+                              <th>Date Applied</th>
+                              <th>Status</th>
+                              <th>Cover Letter</th>
+                              <th>CV</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {userCvs.map((cv) => (
+                              <tr key={cv.id}>
+                                <td>{new Date(cv.submittedAt).toLocaleString()}</td>
+                                <td>
+                                  <span className={`status-badge ${getStatusClass(cv.status)}`}>
+                                    {getStatusText(cv.status)}
+                                  </span>
+                                </td>
+                                <td>{cv.coverLetter}</td>
+                                <td>
+                                  <a 
+                                    href={cv.resumeUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="btn btn-primary btn-sm"
+                                  >
+                                    View CV
+                                  </a>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
-      {/* End table widget content */}
+
+      <style jsx>{`
+        .job-card {
+          border: 1px solid #e0e0e0;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          overflow: hidden;
+        }
+
+        .job-header {
+          padding: 16px;
+          background-color: #f8f9fa;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .job-title {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1967d2;
+        }
+
+        .job-info {
+          display: flex;
+          gap: 16px;
+        }
+
+        .job-info span {
+          color: #666;
+        }
+
+        .job-details {
+          padding: 16px;
+          background-color: white;
+        }
+
+        .description {
+          margin-bottom: 16px;
+        }
+
+        .description h5 {
+          margin-bottom: 8px;
+          color: #333;
+        }
+
+        .applied-cvs {
+          margin-top: 16px;
+        }
+
+        .applied-cvs h5 {
+          margin-bottom: 8px;
+          color: #333;
+        }
+
+        .status-badge {
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-weight: 500;
+        }
+
+        .status-pending {
+          background-color: #fff3cd;
+          color: #856404;
+        }
+
+        .status-accepted {
+          background-color: #d4edda;
+          color: #155724;
+        }
+
+        .status-rejected {
+          background-color: #f8d7da;
+          color: #721c24;
+        }
+
+        .search-box {
+          margin-right: 16px;
+        }
+
+        .search-box input {
+          padding: 8px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          width: 200px;
+        }
+
+        .chosen-outer {
+          display: flex;
+          align-items: center;
+        }
+
+        .expand-icon {
+          font-size: 12px;
+          color: #666;
+        }
+      `}</style>
     </div>
   );
 };
 
 export default JobListingsTable;
+

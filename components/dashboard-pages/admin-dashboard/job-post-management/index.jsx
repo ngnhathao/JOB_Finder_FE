@@ -336,7 +336,6 @@ const JobPostManagement = () => {
   };
 
   // Adjust content mapping to display job data and admin actions
-
   let content = paginatedJobs
     ?.map((item) => (
       <div className="job-block" key={item.jobId}>
@@ -352,9 +351,11 @@ const JobPostManagement = () => {
               })()}
             </span>
 
-
-        <div className="job-info-area" style={{ flexGrow: 1, paddingLeft: '15px' }}>
-          <h4 className="job-title">{item.title}</h4>
+            <div className="job-details">
+              {/* Job Title */}
+              <h4>
+                <Link href={`/job-single-v3/${item.jobId}`}>{item.title}</Link>
+              </h4>
 
               <ul className="job-info">
                 {/* Company Name from lookup */}
@@ -406,8 +407,8 @@ const JobPostManagement = () => {
                   <li className="urgent">{getExperienceLevelName(item.experienceLevelId)}</li>
                 )}
               </ul>
-
             </div>
+          </div>
 
           {/* Admin Actions Buttons */}
           <div className="job-actions">
@@ -422,12 +423,10 @@ const JobPostManagement = () => {
             <button className="btn btn-sm me-1" onClick={() => handleShowEdit(item)}>Edit</button>
             {/* Delete button */}
             <button className="btn btn-sm me-1" onClick={() => handleShowDelete(item)}>Delete</button>
-
           </div>
         </div>
       </div>
-    </div>
-  ));
+    ));
 
   // Pagination controls - Operate on totalJobs from API and local currentPage/itemsPerPage
   const sortHandler = (e) => {
@@ -511,8 +510,9 @@ const JobPostManagement = () => {
 
       const result = await response.json();
       console.log('Success response:', result);
-      setAlertMsg("Job post approved!");
-      fetchJobs();
+      setAlertMsg("Job post approved successfully!");
+      // Cập nhật lại danh sách jobs
+      await fetchJobs();
     } catch (error) {
       console.error('Error approving job:', error);
       setAlertMsg(`Failed to approve job post: ${error.message || error}`);
@@ -1016,211 +1016,6 @@ const JobPostManagement = () => {
             flex: 1;
             min-width: 80px;
           }
-        }
-        /* Added styles for the new layout structure */
-        .company-logo-title {
-            display: flex;
-            align-items: center;
-            gap: 8px; /* Space between logo and small company name */
-            margin-bottom: 8px; /* Space below logo/small name */
-        }
-        .company-name-small {
-            font-size: 14px; /* Smaller font size */
-            color: #555; /* Grey color */
-        }
-        .job-details h4 {
-            margin-top: 0;
-            margin-bottom: 4px; /* Space below main company name */
-            font-size: 18px; /* Adjust font size if needed */
-        }
-        .job-info li {
-             list-style: none;
-             display: flex;
-             align-items: center;
-             gap: 4px; /* Space between icon and text */
-        }
-        .job-info li .icon {
-            font-size: 16px; /* Adjust icon size */
-            color: #555; /* Icon color */
-        }
-        /* New styles for template layout */
-        .inner-box {
-            position: relative; /* Needed for absolute positioning of bookmark */
-        }
-        .job-info-area {
-            flex-direction: column; /* Stack logo/small name and main info */
-            align-items: flex-start; /* Align items to the start */
-            gap: 16px; /* Space between logo/small name block and main info block */
-            flex-grow: 1; /* Allow info area to take available space */
-            padding-right: 120px; /* Add space for buttons/bookmark */
-        }
-        .job-meta-top-left {
-            display: flex;
-            align-items: center;
-            gap: 8px; /* Space between logo and small name */
-        }
-        .main-info-line {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap; /* Allow items to wrap on smaller screens */
-            gap: 15px; /* Space between items in the main info line */
-        }
-        .main-info-line h4 {
-            margin: 0; /* Remove default h4 margins */
-        }
-        .job-info {
-            padding-left: 0; /* Remove default ul padding */
-            margin-bottom: 0; /* Remove default ul margin */
-            display: flex; /* Ensure job-info is flex container */
-            align-items: center;
-            gap: 15px; /* Space between job-info items */
-            flex-wrap: wrap; /* Allow items to wrap */
-        }
-        .job-info li {
-            margin: 0; /* Remove default li margins */
-             list-style: none; /* Ensure no list bullets */
-        }
-        .job-other-info {
-            padding-left: 0; /* Remove default ul padding */
-             margin-top: 12px; /* Space above tags */
-        }
-        .bookmark-icon {
-            position: absolute;
-            top: 20px; /* Adjust position from top */
-            right: 20px; /* Adjust position from right (considering padding) */
-            font-size: 20px;
-            color: #999; /* Bookmark icon color */
-        }
-        .job-actions {
-            position: absolute;
-            top: 20px; /* Align actions to the top */
-            right: 80px; /* Position actions to the right of bookmark */
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 10px;
-        }
-        @media (max-width: 768px) {
-             .job-info-area { padding-right: 0; }
-             .bookmark-icon { top: auto; bottom: 20px; right: 80px; }
-             .job-actions { top: auto; bottom: 20px; right: 20px; }
-             .main-info-line { flex-direction: column; align-items: flex-start; gap: 8px;}
-             .job-info { flex-direction: column; align-items: flex-start; gap: 8px;}
-             .job-other-info { margin-top: 8px;}
-        }
-
-        /* New styles for job block layout */
-        .job-block {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          background: #fff;
-          border-radius: 16px;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-          padding: 16px 24px;
-          margin-bottom: 16px;
-          transition: box-shadow 0.2s, background 0.2s, transform 0.18s;
-        }
-        .job-block:hover {
-          background: #f5f7fa;
-          box-shadow: 0 6px 24px rgba(25,103,210,0.08);
-          transform: scale(1.015);
-        }
-        .inner-box {
-          display: flex;
-          width: 100%;
-          align-items: center;
-          justify-content: space-between;
-          position: relative;
-        }
-        .job-info-area {
-          flex-grow: 1;
-          padding-right: 120px;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        .job-meta-top-left {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 8px;
-        }
-        .company-logo {
-          width: 50px;
-          height: 49px;
-          border-radius: 8px;
-          background: #f3f3f3;
-          object-fit: contain;
-          border: 1px solid #eee;
-        }
-        .company-name-small {
-          font-size: 14px;
-          color: #555;
-          font-weight: 500;
-        }
-        .job-details {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        .main-info-line {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          flex-wrap: wrap;
-        }
-        .job-location, .job-salary {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 14px;
-          color: #333;
-        }
-        .job-location .icon, .job-salary .icon {
-          font-size: 16px;
-          color: #666;
-        }
-        .job-tags {
-          display: flex;
-          gap: 8px;
-          padding: 0;
-          margin: 0;
-        }
-        .job-tag {
-          list-style: none;
-          background: #e0f7fa;
-          color: #00695c;
-          padding: 4px 12px;
-          border-radius: 12px;
-          font-size: 13px;
-          font-weight: 500;
-        }
-        .bookmark-icon {
-          position: absolute;
-          top: 16px;
-          right: 80px;
-          font-size: 20px;
-          color: #999;
-        }
-        .job-actions {
-          position: absolute;
-          top: 16px;
-          right: 16px;
-          display: flex;
-          flex-direction: column;
-          align-items: flex-end;
-          gap: 8px;
-        }
-        .job-actions button {
-          min-width: 80px;
-        }
-        @media (max-width: 768px) {
-          .job-block { flex-direction: column; align-items: flex-start; }
-          .job-info-area { padding-right: 0; }
-          .bookmark-icon { top: auto; bottom: 16px; right: 16px; }
-          .job-actions { top: auto; bottom: 16px; right: 16px; flex-direction: row; gap: 8px; }
-          .main-info-line { flex-direction: column; align-items: flex-start; gap: 8px; }
         }
       `}</style>
       <span className="header-span"></span>

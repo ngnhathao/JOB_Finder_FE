@@ -84,4 +84,11 @@ module.exports = [
     routePath: "/",
     active: "",
   },
+  {
+    id: 13,
+    name: "Favorite Companies",
+    icon: "la-star",
+    routePath: "/candidates-dashboard/favorite-companies",
+    active: "",
+  },
 ];

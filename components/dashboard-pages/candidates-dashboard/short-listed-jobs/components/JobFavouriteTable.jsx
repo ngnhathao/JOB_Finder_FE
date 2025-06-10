@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link.js";
 import jobs from "../../../../../data/job-featured.js";
 import Image from "next/image.js";

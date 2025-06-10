@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import ApiService from "@/services/api.service";
 import LoginPopup from "@/components/common/form/login/LoginPopup";
 import FooterDefault from "@/components/footer/common-footer";
-import DefaulHeader from "@/components/header/DefaulHeader";
+import DefaulHeader2 from "@/components/header/DefaulHeader2";
 import MobileMenu from "@/components/header/MobileMenu";
 import JobDetailsDescriptions from "@/components/employer-single-pages/shared-components/JobDetailsDescriptions";
 import RelatedJobs from "@/components/employer-single-pages/related-jobs/RelatedJobs";
@@ -12,12 +12,16 @@ import MapJobFinder from "@/components/job-listing-pages/components/MapJobFinder
 import Social from "@/components/employer-single-pages/social/Social";
 import PrivateMessageBox from "@/components/employer-single-pages/shared-components/PrivateMessageBox";
 import Image from "next/image";
+import { toast } from "react-toastify";
+import jobService from "@/services/jobService";
 
 const EmployersSingleV1 = ({ params }) => {
   const id = params.id;
   const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isLoadingFavorite, setIsLoadingFavorite] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -32,6 +36,41 @@ const EmployersSingleV1 = ({ params }) => {
       });
   }, [id]);
 
+  useEffect(() => {
+    const fetchFavorite = async () => {
+      try {
+        const favorites = await jobService.getFavoriteCompanies();
+        setIsFavorite(favorites.some(c => Number(c.userId) === Number(company.userId)));
+      } catch (e) {
+        setIsFavorite(false);
+      }
+    };
+    if (company?.userId) fetchFavorite();
+  }, [company?.userId]);
+
+  const handleBookmark = async () => {
+    try {
+      setIsLoadingFavorite(true);
+      if (isFavorite) {
+        await jobService.unfavoriteCompany(company.userId);
+        setIsFavorite(false);
+        toast.success("Đã xóa khỏi danh sách yêu thích");
+      } else {
+        await jobService.favoriteCompany(company.userId);
+        setIsFavorite(true);
+        toast.success("Đã thêm vào danh sách yêu thích");
+      }
+    } catch (error) {
+      if (error?.response?.status === 401) {
+        toast.error("Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại");
+      } else {
+        toast.error("Có lỗi xảy ra khi xử lý yêu thích");
+      }
+    } finally {
+      setIsLoadingFavorite(false);
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
   if (!company) return <div>No company found.</div>;
@@ -44,7 +83,7 @@ const EmployersSingleV1 = ({ params }) => {
       <LoginPopup />
       {/* End Login Popup Modal */}
 
-      <DefaulHeader />
+      <DefaulHeader2 />
       {/* <!--End Main Header --> */}
 
       <MobileMenu />
@@ -102,7 +141,22 @@ const EmployersSingleV1 = ({ params }) => {
                   >
                     Private Message
                   </button>
-                  <button className="bookmark-btn">
+                  <button
+                    className={`bookmark-btn${isFavorite ? " active" : ""}`}
+                    title={isFavorite ? "Bỏ yêu thích" : "Lưu công ty"}
+                    onClick={handleBookmark}
+                    disabled={isLoadingFavorite}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: isFavorite ? "#ffc107" : "#666",
+                      fontSize: 20,
+                      marginLeft: 16,
+                      opacity: 1,
+                      visibility: "visible",
+                    }}
+                  >
                     <i className="flaticon-bookmark"></i>
                   </button>
                 </div>

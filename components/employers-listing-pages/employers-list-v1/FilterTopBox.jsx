@@ -15,6 +15,10 @@ import {
 } from "../../../features/filter/employerFilterSlice";
 import Image from "next/image";
 import { useState, useEffect } from "react";
+import { jobService } from "../../../services/jobService";
+import { toast } from "react-toastify";
+import Cookies from 'js-cookie';
+import { useRouter } from "next/navigation";
 
 const FilterTopBox = () => {
   const {
@@ -28,6 +32,7 @@ const FilterTopBox = () => {
     companySize,
   } = useSelector((state) => state.employerFilter) || {};
   const dispatch = useDispatch();
+  const router = useRouter();
 
   // Add state for fetched companies, loading, and error
   const [companies, setCompanies] = useState([]);
@@ -35,6 +40,8 @@ const FilterTopBox = () => {
   const [error, setError] = useState(null);
   const [totalCompanies, setTotalCompanies] = useState(0); // Add state for total count if API returns it
   const [industries, setIndustries] = useState([]); // State to fetch industries for mapping
+  const [bookmarkedCompanies, setBookmarkedCompanies] = useState([]);
+  const [isLoadingBookmarks, setIsLoadingBookmarks] = useState(false);
 
   // Fetch industries on component mount
   useEffect(() => {
@@ -143,6 +150,33 @@ const FilterTopBox = () => {
     fetchCompanies();
   }, [keyword, location, destination, industry, foundationDate, sort, perPage, companySize]); // Add all filter dependencies
 
+  // Lấy token helper
+  const getToken = () => {
+    let token = localStorage.getItem('token');
+    if (!token) {
+      token = Cookies.get('token');
+    }
+    return token;
+  };
+
+  // Lấy danh sách company đã bookmark khi load trang
+  useEffect(() => {
+    const fetchFavoriteCompanies = async () => {
+      try {
+        setIsLoadingBookmarks(true);
+        const token = getToken();
+        if (!token) return; // Không gọi API nếu chưa đăng nhập
+        const favorites = await jobService.getFavoriteCompanies();
+        setBookmarkedCompanies(favorites.map(company => Number(company.userId)));
+      } catch (error) {
+        console.error("Error fetching favorite companies:", error);
+      } finally {
+        setIsLoadingBookmarks(false);
+      }
+    };
+    fetchFavoriteCompanies();
+  }, []);
+
   const industryMap = industries.reduce((acc, industry) => {
     acc[industry.industryId] = industry.industryName;
     return acc;
@@ -226,66 +260,79 @@ const FilterTopBox = () => {
 
   console.log('After sort and slice (paginated):', sortedAndPaginatedCompanies); // Log after sort/slice
 
-  // *** CORRECTLY map array of objects to array of React elements ***
-  let content = sortedAndPaginatedCompanies // Use sortedAndPaginatedCompanies for mapping
-    ?.map((company) => (
-      <div className="company-block" key={company.userId}> {/* Use company.userId as key */}
-        <div className="inner-box"> {/* Keeping inner-box for structure/styling */}
-          {/* New horizontal layout */} {/* Added main flex container */}
-          <div className="d-flex align-items-center justify-content-between w-100"> {/* Flex container for horizontal layout */}
-             <div className="d-flex align-items-center"> {/* Flex container for logo and info */}
-               <span className="company-logo me-3"> {/* Added margin-right */}
-                  <Image
-                   width={50} // Adjust logo size based on new image
-                   height={50} // Adjust logo size based on new image
-                    src={company.urlCompanyLogo || company.imageLogoLgr || '/images/resource/company-6.png'}
-                    alt={company.companyName}
-                  />
-                </span>
-                <div className="company-info-block"> {/* Keeping company-info-block div */}
-                 <h4 style={{ margin: 0, textAlign: 'left' }}>
-   <Link
-     href={`/employers-single-v1/${company.userId}`}
-     style={{
-       color: '#333',
-       textDecoration: 'none',
-     }}
-     onMouseEnter={(e) => (e.target.style.color = '#377dff')} // màu hover
-     onMouseLeave={(e) => (e.target.style.color = '#333')}     // màu gốc
-   >
-                       {company.companyName}
-                     </Link>
-                   </h4>
-                   <div className="d-flex align-items-center gap-3"> {/* Location, Industry, Team Size */}
-                     <div className="d-flex align-items-center me-3">
-                       <span className="icon flaticon-map-locator me-2"></span>
-                       <span>{company.location}</span>
-                     </div>
-                     <div className="d-flex align-items-center">
-                       <span className="icon flaticon-briefcase me-2"></span>
-                       <span>{industryMap[company.industryId] || `Industry ID: ${company.industryId}`}</span>
-                     </div>
-                    <div className="d-flex align-items-center">
-                       <span className="icon flaticon-user me-2"></span> {/* Using flaticon-user as a common user/team icon */}
-                       <span>{company.teamSize || 'N/A'}</span> {/* Assuming teamSize property exists in company data */}
-                     </div>
-                   </div>
-                </div>
-              </div>
+  // Xử lý click bookmark
+  const handleBookmark = async (companyId) => {
+    try {
+      const token = getToken();
+      if (!token) {
+        toast.error("Vui lòng đăng nhập để sử dụng tính năng này");
+        return;
+      }
+      const id = Number(companyId);
+      if (bookmarkedCompanies.includes(id)) {
+        await jobService.unfavoriteCompany(id);
+        setBookmarkedCompanies(prev => prev.filter(cid => cid !== id));
+        toast.success("Đã xóa khỏi danh sách yêu thích");
+      } else {
+        await jobService.favoriteCompany(id);
+        setBookmarkedCompanies(prev => [...prev, id]);
+        toast.success("Đã thêm vào danh sách yêu thích");
+      }
+    } catch (error) {
+      console.error("Error handling bookmark:", error);
+      if (error.response?.status === 401) {
+        toast.error("Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại");
+      } else {
+        toast.error("Có lỗi xảy ra khi xử lý yêu thích");
+      }
+    }
+  };
 
-            {/* Open Jobs button and Bookmark icon container */} {/* Added container */}
-             <div className="d-flex align-items-center"> {/* Flex container for button and bookmark */}
-               {/* Open jobs button removed as requested */}
-               {/* Added Bookmark button */} {/* Added bookmark button */}
-               <button className="bookmark-btn" title="Lưu công ty"> {/* Added bookmark button */}
-                 <span className="flaticon-bookmark"></span> {/* Added bookmark icon */}
-               </button>
-            </div>
+  // Render danh sách company với nút bookmark
+  const content = sortedAndPaginatedCompanies?.map((company) => (
+    <div
+      className="company-block-three"
+      key={company.userId}
+      style={{ cursor: 'pointer' }}
+      onClick={() => router.push(`/employers-single-v1/${company.userId}`)}
+    >
+      <div className="inner-box position-relative d-flex align-items-center">
+        <img src={company.urlCompanyLogo} alt={company.companyName} width={50} height={50} />
+        <div className="ms-3">
+          <h4>{company.companyName}</h4>
+          <div className="d-flex align-items-center gap-3">
+            <span className="icon flaticon-map-locator me-2"></span>
+            <span>{company.location}</span>
+            <span className="icon flaticon-briefcase me-2"></span>
+            <span>{industryMap[company.industryId] || `Industry ID: ${company.industryId}`}</span>
+            <span className="icon flaticon-user me-2"></span>
+            <span>{company.teamSize || 'N/A'}</span>
           </div>
-
         </div>
+        <button
+          className={`bookmark-btn ${bookmarkedCompanies.includes(Number(company.userId)) ? 'active' : ''}`}
+          title="Lưu công ty"
+          onClick={e => {
+            e.stopPropagation();
+            handleBookmark(company.userId);
+          }}
+          disabled={isLoadingBookmarks}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: bookmarkedCompanies.includes(Number(company.userId)) ? '#ffc107' : '#666',
+            fontSize: 20,
+            marginLeft: 16,
+            opacity: 1,
+            visibility: 'visible',
+          }}
+        >
+          <span className="flaticon-bookmark"></span>
+        </button>
       </div>
-    ));
+    </div>
+  ));
 
   // per page handler
   const perPageHandler = (e) => {

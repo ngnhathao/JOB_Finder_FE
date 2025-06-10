@@ -1,3 +1,5 @@
+"use client";
+
 import axios from "axios";
 import Cookies from 'js-cookie';
 
@@ -89,6 +91,13 @@ const COMPANIES = [
   "Smart Solutions"
 ];
 
+function getToken() {
+  let token = localStorage.getItem('token');
+  if (!token) {
+    token = Cookies.get('token');
+  }
+  return token;
+}
 
 export const jobService = {
   async getJobs(filters = {}) {
@@ -429,8 +438,8 @@ export const jobService = {
         throw new Error('No authentication token found');
       }
 
-      console.log('Making request to:', `${API_URL}/Application/my-applications`);
-      const response = await axios.get(`${API_URL}/Application/my-applications`, {
+      console.log('Making request to:', `${API_URL}/Application/my-applied-jobs-with-cvs`);
+      const response = await axios.get(`${API_URL}/Application/my-applied-jobs-with-cvs`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -446,6 +455,73 @@ export const jobService = {
         console.error("Error response data:", error.response.data);
         console.error("Error response status:", error.response.status);
       }
+      throw error;
+    }
+  },
+
+  getFavoriteCompanies: async () => {
+    try {
+      const token = getToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+      const response = await axios.get(
+        `${API_URL}/Application/my-favorite-companies`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error getting favorite companies:", error);
+      throw error;
+    }
+  },
+
+  favoriteCompany: async (companyId) => {
+    try {
+      const token = getToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+      const response = await axios.post(
+        `${API_URL}/Application/favorite-company/${companyId}`,
+        {},
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error favoriting company:", error);
+      throw error;
+    }
+  },
+
+  unfavoriteCompany: async (companyId) => {
+    try {
+      const token = getToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+      const response = await axios.delete(
+        `${API_URL}/Application/favorite-company/${companyId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error unfavoriting company:", error);
       throw error;
     }
   },

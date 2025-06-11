@@ -16,6 +16,8 @@ import ApplyJobModalContent from "@/components/job-single-pages/shared-component
 import Image from "next/image";
 import { companyService } from "@/services/companyService";
 import DefaulHeader2 from "@/components/header/DefaulHeader2";
+import ApiService from "@/services/api.service";
+import API_CONFIG from "@/config/api.config";
 
 const JobSingleDynamicV3 = ({ params }) => {
   const [job, setJob] = useState(null);
@@ -26,31 +28,59 @@ const JobSingleDynamicV3 = ({ params }) => {
   const [company, setCompany] = useState(null);
 
   useEffect(() => {
-    jobService.getJobById(params.id)
-      .then(setJob)
-      .catch(() => setJob(null));
-    jobService.getIndustries().then(setIndustries);
-    jobService.getLevel && jobService.getLevel().then(setLevels); // Nếu có hàm getLevels
-    jobService.getJobTypes().then(setJobTypes);
-    jobService.getExperienceLevels().then(setExperienceLevels);
-    jobService.getJobLevels().then(setLevels);
+    const fetchData = async () => {
+      try {
+        const [jobResponse, industriesResponse, levelsResponse, jobTypesResponse, experienceLevelsResponse] = await Promise.all([
+          jobService.getJobById(params.id),
+          ApiService.get(API_CONFIG.ENDPOINTS.INDUSTRY),
+          ApiService.get(API_CONFIG.ENDPOINTS.LEVEL),
+          ApiService.get(API_CONFIG.ENDPOINTS.JOB_TYPE),
+          ApiService.get(API_CONFIG.ENDPOINTS.EXPERIENCE_LEVEL),
+        ]);
+
+        setJob(jobResponse);
+        setIndustries(industriesResponse);
+        setLevels(levelsResponse);
+        setJobTypes(jobTypesResponse);
+        setExperienceLevels(experienceLevelsResponse);
+
+        if (jobResponse?.companyId) {
+          companyService.getCompanyById(jobResponse.companyId)
+            .then(setCompany)
+            .catch(() => setCompany(null));
+        }
+
+      } catch (error) {
+        console.error("Error fetching job details or related data:", error);
+        setJob(null);
+        setIndustries([]);
+        setLevels([]);
+        setJobTypes([]);
+        setExperienceLevels([]);
+        setCompany(null);
+      }
+    };
+
+    fetchData();
   }, [params.id]);
 
   useEffect(() => {
-    if (job?.companyId) {
-      companyService.getCompanyById(job.companyId)
-        .then(setCompany)
-        .catch(() => setCompany(null));
-    }
-  }, [job?.companyId]);
+    console.log("Job data in page.jsx:", job);
+    console.log("Industries in page.jsx:", industries);
+    console.log("Levels in page.jsx:", levels);
+    console.log("Job Types in page.jsx:", jobTypes);
+    console.log("Experience Levels in page.jsx:", experienceLevels);
+  }, [job, industries, levels, jobTypes, experienceLevels]);
 
   const getIndustryName = (id) => industries.find(i => i.industryId === id)?.industryName || "N/A";
   const getLevelName = (id) => levels.find(l => l.id === id)?.levelName || "N/A";
   const getJobTypeName = (id) => jobTypes.find(jt => jt.id === id)?.jobTypeName || "N/A";
   const getExperienceLevelName = (id) => experienceLevels.find(el => el.id === id)?.name || "N/A";  
   const getCompanyName = (companyId) => {
-    const company = companies.find(c => String(c.id) === String(companyId));
-    return company ? company.name : "N/A";
+    // Ensure companies data is available and then find the company
+    // This will likely need to be fetched separately if `companies` is not a global state.
+    // For now, assuming `company` state is sufficient.
+    return company?.companyName || "N/A";
   };
 
   // Build jobTypeList for tag màu (nhiều tag, mỗi tag một màu)
@@ -74,6 +104,11 @@ const JobSingleDynamicV3 = ({ params }) => {
   const levelName = job?.levelId
     ? levels.find(l => l.id === job.levelId)?.levelName || "N/A"
     : "N/A";
+
+  if (!job || industries.length === 0 || levels.length === 0 || jobTypes.length === 0 || experienceLevels.length === 0) {
+    return <div>Loading job details...</div>;
+  }
+
   return (
     <>
       {/* <!-- Header Span --> */}

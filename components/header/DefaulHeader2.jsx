@@ -20,10 +20,10 @@ const DefaulHeader2 = () => {
   const router = useRouter();
   const pathname = usePathname();
   const [navbar, setNavbar] = useState(false);
-  const [userInfo, setUserInfo] = useState({
-    name: 'My Account',
-    avatar: "/images/resource/candidate-1.png"
-  });
+  // const [userInfo, setUserInfo] = useState({
+  //   name: 'My Account',
+  //   avatar: "/images/resource/candidate-1.png"
+  // });
 
   const { isLoggedIn, user, role } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
@@ -44,31 +44,30 @@ const DefaulHeader2 = () => {
       window.addEventListener("scroll", changeBackground);
     }
 
-    // Kiểm tra và cập nhật trạng thái đăng nhập
-    const token = authService.getToken();
-    const userRole = authService.getRole();
-    const userString = localStorage.getItem('user');
+    // Kiểm tra và cập nhật trạng thái đăng nhập từ localStorage nếu Redux state chưa được thiết lập
+    if (!isLoggedIn && typeof window !== 'undefined') {
+      const token = authService.getToken();
+      const userRole = authService.getRole();
+      const userString = localStorage.getItem('user');
 
-    if (token && userRole && userString) {
-      try {
-        const userObj = JSON.parse(userString);
-        const userName = userObj.fullName || userObj.name || 'My Account';
-        const userAvatar = userObj.avatar || userObj.image || "/images/resource/candidate-1.png";
+      if (token && userRole && userString) {
+        try {
+          const userObj = JSON.parse(userString);
+          // Đảm bảo userObj.image hoặc userObj.avatar là ưu tiên
+          const userAvatar = userObj.image || userObj.avatar || "/images/resource/candidate-1.png";
 
-        // Cập nhật Redux state
-        dispatch(setLoginState({ 
-          isLoggedIn: true, 
-          user: userName, 
-          role: userRole 
-        }));
-
-        // Cập nhật local state
-        setUserInfo({
-          name: userName,
-          avatar: userAvatar
-        });
-      } catch (error) {
-        console.error('Error parsing user data:', error);
+          dispatch(setLoginState({ 
+            isLoggedIn: true, 
+            userObject: { 
+              ...userObj, 
+              image: userAvatar, // Ensure the image field is consistent
+              avatar: userAvatar // Ensure the avatar field is consistent
+            }, 
+            role: userRole 
+          }));
+        } catch (error) {
+          console.error('Error parsing user data from localStorage in DefaulHeader2:', error);
+        }
       }
     }
 
@@ -77,22 +76,23 @@ const DefaulHeader2 = () => {
         window.removeEventListener("scroll", changeBackground);
       }
     };
-  }, []); // Empty dependency array
+  }, [isLoggedIn, dispatch]); // Depend on isLoggedIn to prevent unnecessary re-runs
 
-  // Chỉ cập nhật UI khi có thay đổi từ Redux state
-  useEffect(() => {
-    if (isLoggedIn && user) {
-      setUserInfo(prev => ({
-        ...prev,
-        name: user
-      }));  
-    } else if (!isLoggedIn) {
-      setUserInfo({
-        name: 'My Account',
-        avatar: "/images/resource/candidate-1.png"
-      });
-    }
-  }, [isLoggedIn, user]);
+  // Cập nhật UI khi có thay đổi từ Redux state - THIS IS NOW REDUNDANT AND COMMENTED OUT PREVIOUSLY
+  // useEffect(() => {
+  //   if (isLoggedIn && user) { // `user` is now the full user object from Redux
+  //     setUserInfo(prev => ({
+  //       ...prev,
+  //       name: user.fullName || user.name, // Access fullName from the user object
+  //       avatar: user.image || user.avatar || "/images/resource/candidate-1.png" // Access image/avatar from user object
+  //     }));  
+  //   } else if (!isLoggedIn) {
+  //     setUserInfo({
+  //       name: 'My Account',
+  //       avatar: "/images/resource/candidate-1.png"
+  //     });
+  //   }
+  // }, [isLoggedIn, user]); // Depend on isLoggedIn and the full user object
 
   const handleLogout = () => {
     // Xóa tất cả dữ liệu authentication
@@ -102,10 +102,10 @@ const DefaulHeader2 = () => {
     
     // Cập nhật state
     dispatch(clearLoginState());
-    setUserInfo({
-      name: 'My Account',
-      avatar: "/images/resource/candidate-1.png"
-    });
+    // setUserInfo({
+    //   name: 'My Account',
+    //   avatar: "/images/resource/candidate-1.png"
+    // });
 
     // Chuyển hướng về trang chủ
     window.location.href = '/';
@@ -181,7 +181,7 @@ const DefaulHeader2 = () => {
                   <BecomeRecruiterModal
                     open={openRecruiterModal}
                     onCancel={() => setOpenRecruiterModal(false)}
-                    userId={userInfo.id || userInfo.userId || userInfo._id || userInfo.uid || user}
+                    userId={user?.id || user?.userId || user?._id || user.uid || user}
                   />
                 </>
               )}
@@ -192,10 +192,10 @@ const DefaulHeader2 = () => {
                       alt="avatar"
                       width={50}
                       height={50}
-                      src={userInfo.avatar}
+                      src={user?.image || user?.avatar || "/images/resource/candidate-1.png"}
                       className="thumb"
                     />
-                    <span className="name">{userInfo.name}</span>
+                    <span className="name">{user?.fullName || user?.name || 'My Account'}</span>
                   </a>
                   <ul className="dropdown-menu">
                     {employerMenuData.map((item) => (
@@ -230,10 +230,10 @@ const DefaulHeader2 = () => {
                       alt="avatar"
                       width={50}
                       height={50}
-                      src={userInfo.avatar}
+                      src={user?.image || user?.avatar || "/images/resource/candidate-1.png"}
                       className="thumb"
                     />
-                    <span className="name">{userInfo.name}</span>
+                    <span className="name">{user?.fullName || user?.name || 'My Account'}</span>
                   </a>
                   <ul className="dropdown-menu">
                     {candidatesMenuData.map((item) => (
@@ -268,10 +268,10 @@ const DefaulHeader2 = () => {
                       alt="avatar"
                       width={50}
                       height={50}
-                      src={userInfo.avatar}
+                      src={user?.image || user?.avatar || "/images/resource/candidate-1.png"}
                       className="thumb"
                     />
-                    <span className="name">{userInfo.name}</span>
+                    <span className="name">{user?.fullName || user?.name || 'My Account'}</span>
                   </a>
                   <ul className="dropdown-menu">
                     {adminMenuData.map((item) => (

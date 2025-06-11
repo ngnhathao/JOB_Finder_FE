@@ -5,6 +5,7 @@ export const authService = {
   async login(email, password) {
     try {
       const data = await ApiService.login(email, password);
+      console.log('authService.login: Raw data from ApiService.login:', data);
       // Lưu token và role (và tên nếu có) vào cookies với domain và path phù hợp
       const cookieOptions = {
         expires: 7, // 7 days

@@ -15,21 +15,16 @@ const Register = ({ isPopup = false, onRegistrationSuccess }) => {
 
   return (
     <div className="form-inner">
-      <h3>Create a Free Superio Account</h3>
+      <h3>Create a JobFinder Account</h3>
 
       <Tabs onSelect={handleTabSelect}>
         <div className="form-group register-dual">
           <TabList className="btn-box row">
             <Tab className="col-lg-6 col-md-12">
-              <button className="theme-btn btn-style-four">
-                <i className="la la-user"></i> Candidate
-              </button>
+              <button>Candidate</button>
             </Tab>
-
             <Tab className="col-lg-6 col-md-12">
-              <button className="theme-btn btn-style-four">
-                <i className="la la-briefcase"></i> Employer
-              </button>
+              <button>Employer</button>
             </Tab>
           </TabList>
         </div>
@@ -67,9 +62,8 @@ const Register = ({ isPopup = false, onRegistrationSuccess }) => {
           )}
         </div>
         <div className="divider">
-          <span>or</span>
         </div>
-        <LoginWithSocial />
+        {/* <LoginWithSocial /> */}
       </div>
       {/* End bottom-box LoginWithSocial */}
     </div>

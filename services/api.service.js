@@ -116,7 +116,6 @@ class ApiServiceClass {
     const options = {
       method,
       headers: {
-        'Content-Type': 'application/json',
         'Accept': 'application/json',
         'Authorization': `Bearer ${token}`
       },
@@ -124,7 +123,14 @@ class ApiServiceClass {
     };
 
     if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
-      options.body = JSON.stringify(data);
+      if (data instanceof FormData) {
+        options.body = data;
+        // KHÔNG set Content-Type, browser sẽ tự động set boundary cho multipart/form-data
+        delete options.headers['Content-Type'];
+      } else {
+        options.headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(data);
+      }
     }
 
     try {
@@ -132,6 +138,10 @@ class ApiServiceClass {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      // If response is 204 No Content, return null instead of trying to parse JSON
+      if (response.status === 204) {
+        return null;
       }
       return response.json();
     } catch (error) {
@@ -142,6 +152,20 @@ class ApiServiceClass {
 
   static async getCompanyProfileById(id) {
     const url = API_CONFIG.getUrl(`CompanyProfile/${id}`);
+    const options = API_CONFIG.getRequestOptions();
+    return API_CONFIG.handleResponse(await fetch(url, options));
+  }
+
+  // Candidate Profile APIs
+  static async getCandidateProfileById(id) {
+    const url = API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.CANDIDATE_PROFILE.GET_BY_ID(id));
+    const options = API_CONFIG.getRequestOptions();
+    return API_CONFIG.handleResponse(await fetch(url, options));
+  }
+
+  // Skill APIs
+  static async getSkillById(id) {
+    const url = API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.SKILL.GET_BY_ID(id));
     const options = API_CONFIG.getRequestOptions();
     return API_CONFIG.handleResponse(await fetch(url, options));
   }
@@ -199,8 +223,9 @@ const ApiService = {
     const options = { method: 'DELETE' };
     return fetch(url, options);
   },
-  getCompanyProfileById: ApiServiceClass.getCompanyProfileById
+  getCompanyProfileById: ApiServiceClass.getCompanyProfileById,
+  getCandidateProfileById: ApiServiceClass.getCandidateProfileById,
+  getSkillById: ApiServiceClass.getSkillById
 };
-
 
 export default ApiService; 

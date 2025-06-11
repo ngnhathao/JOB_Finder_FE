@@ -8,17 +8,25 @@ import { isActiveLink } from "../../utils/linkActiveChecker";
 
 import { useDispatch, useSelector } from "react-redux";
 import { menuToggle } from "../../features/toggle/toggleSlice";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { authService } from "../../services/authService";
+import { clearLoginState } from "../../features/auth/authSlice";
 
 const DashboardCandidatesSidebar = () => {
   const { menu } = useSelector((state) => state.toggle);
   const percentage = 30;
 
-
   const dispatch = useDispatch();
+  const router = useRouter();
   // menu togggle handler
   const menuToggleHandler = () => {
     dispatch(menuToggle());
+  };
+
+  const handleLogout = () => {
+    authService.logout(); // Clear localStorage
+    dispatch(clearLoginState()); // Clear Redux state
+    router.push("/login"); // Redirect to login page
   };
 
   return (
@@ -41,9 +49,15 @@ const DashboardCandidatesSidebar = () => {
               key={item.id}
               onClick={menuToggleHandler}
             >
-              <Link href={item.routePath}>
-                <i className={`la ${item.icon}`}></i> {item.name}
-              </Link>
+              {item.isLogout ? (
+                <a onClick={handleLogout} style={{ cursor: 'pointer' }}>
+                  <i className={`la ${item.icon}`}></i> {item.name}
+                </a>
+              ) : (
+                <Link href={item.routePath}>
+                  <i className={`la ${item.icon}`}></i> {item.name}
+                </Link>
+              )}
             </li>
           ))}
         </ul>

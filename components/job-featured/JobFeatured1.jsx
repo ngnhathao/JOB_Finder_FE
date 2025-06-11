@@ -9,11 +9,19 @@ const JobFeatured1 = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [companies, setCompanies] = useState([]);
 
   useEffect(() => {
     const fetchFeaturedJobs = async () => {
       try {
         setLoading(true);
+        // Fetch companies data
+        const companiesRes = await jobService.getCompanies().catch(err => {
+          console.error('Failed to fetch companies data in JobFeatured1', err);
+          return [];
+        });
+        setCompanies(companiesRes);
+
         // Gọi API với status = 1 để chỉ lấy job đã được approve
         const response = await jobService.getJobs({ 
           status: 1,  // Chỉ lấy job đã được approve
@@ -57,12 +65,19 @@ const JobFeatured1 = () => {
           <div className="inner-box">
             <div className="content">
               <span className="company-logo">
-                <Image
-                  width={50}
-                  height={49}
-                  src={item.logo || '/images/resource/company-logo/default-logo.png'}
-                  alt={item.companyName || 'Company Logo'}
-                />
+                {(() => {
+                  const company = companies.find(c => c.id === item.companyId);
+                  const logoSrc = company?.logo || '/images/resource/company-logo/default-logo.png';
+                  const companyName = company?.name || 'Company Logo';
+                  return (
+                    <Image
+                      width={50}
+                      height={49}
+                      src={logoSrc}
+                      alt={companyName}
+                    />
+                  );
+                })()}
               </span>
               <h4>
                 <Link href={`/job-single-v1/${item.id}`}>{item.jobTitle}</Link>

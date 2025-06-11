@@ -1,7 +1,6 @@
 'use client'
 
 import Link from "next/link";
-import LoginWithSocial from "../shared/LoginWithSocial";
 import { authService } from "@/services/authService";
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -58,7 +57,7 @@ const FormContent = ({ isPopup = false }) => {
         new Promise(resolve => {
           dispatch(setLoginState({ 
             isLoggedIn: true, 
-            user: userInfo.fullName, 
+            userObject: user,
             role: responseData.role 
           }));
           resolve();
@@ -70,19 +69,16 @@ const FormContent = ({ isPopup = false }) => {
         closeBtnRef.current.click();
       }
 
-      // Đợi một chút để đảm bảo state đã được cập nhật
-      await new Promise(resolve => setTimeout(resolve, 100));
-
       // Chuyển hướng dựa trên role
       const userRole = responseData.role || user.role;
       const redirectPath = userRole === 'Admin' ? '/admin-dashboard/dashboard' : '/';
       
-      // Sử dụng window.location.href thay vì router để tránh hydration issues
+      // Sử dụng window.location.href để tải lại trang đầy đủ
       window.location.href = redirectPath;
 
     } catch (error) {
-      if (error.message && error.message.includes('Invalid credentials')) {
-        setError('Invalid email or password.');
+      if (error.message && (error.message.includes('401') || error.message.includes('Invalid credentials'))) {
+        setError('Incorrect password. Please try again.');
       } else if (error.message && error.message.includes('Unexpected token')) {
         setError('Network or server error.');
       } else {
@@ -95,7 +91,7 @@ const FormContent = ({ isPopup = false }) => {
 
   return (
     <div className="form-inner">
-      <h3>Login to Superio</h3>
+      <h3>Login to JobFinder</h3>
 
       {error && <div className="alert alert-danger">{error}</div>}
 
@@ -185,10 +181,9 @@ const FormContent = ({ isPopup = false }) => {
         </div>
 
         <div className="divider">
-          <span>or</span>
         </div>
 
-        <LoginWithSocial />
+        {/* <LoginWithSocial /> */}
       </div>
       {/* End bottom-box LoginWithSocial */}
     </div>

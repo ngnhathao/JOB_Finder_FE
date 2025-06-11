@@ -3,7 +3,7 @@
 import Link from "next/link.js";
 import Image from "next/image.js";
 import { useEffect, useState } from "react";
-import companyService from "../../../../../services/companyService";
+import { companyService } from "../../../../../services/companyService";
 import { useRouter } from "next/navigation";
 import { toast } from 'react-toastify';
 

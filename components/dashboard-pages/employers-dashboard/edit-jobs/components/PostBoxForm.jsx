@@ -15,7 +15,7 @@ import 'react-quill/dist/quill.snow.css';
 
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
-const PostBoxForm = () => {
+const PostBoxForm = ({ initialData, isEditing }) => {
   const specialisms = [
     { value: "Banking", label: "Banking" },
     { value: "Digital & Creative", label: "Digital & Creative" },
@@ -66,6 +66,10 @@ const PostBoxForm = () => {
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
     ApiService.get(API_CONFIG.ENDPOINTS.LEVEL).then(setLevels);
     ApiService.get(API_CONFIG.ENDPOINTS.JOB_TYPE).then(setJobTypes);
     ApiService.get(API_CONFIG.ENDPOINTS.EXPERIENCE_LEVEL).then(setExperienceLevels);
@@ -77,8 +81,30 @@ const PostBoxForm = () => {
     const userId = localStorage.getItem('userId') || Cookies.get('userId');
     const userRole = localStorage.getItem('role') || Cookies.get('role');
     setUser({ userId, role: userRole });
-    setIsClient(true);
-  }, []);
+
+    if (isEditing && initialData) {
+      const initialStatusForForm = initialData.status === 0 ? "Pending" : initialData.status === 1 ? "Active" : initialData.status === 2 ? "Inactive" : "Pending";
+      
+      console.log("initialData.salary BEFORE cleanup:", initialData.salary);
+      const cleanedSalary = initialData.salary != null ? String(initialData.salary).replace(/[^0-9.]/g, '') : "";
+      console.log("initialData.salary AFTER cleanup:", cleanedSalary);
+
+      setFormData({
+        ...initialData,
+        salary: cleanedSalary,
+        industryId: initialData.industryId || 0,
+        levelId: initialData.levelId || 0,
+        jobTypeId: initialData.jobTypeId || 0,
+        experienceLevelId: initialData.experienceLevelId || 0,
+        expiryDate: initialData.expiryDate ? initialData.expiryDate.split('T')[0] : '',
+        timeStart: initialData.timeStart ? initialData.timeStart.split('T')[0] : '',
+        timeEnd: initialData.timeEnd ? initialData.timeEnd.split('T')[0] : '',
+        status: initialStatusForForm,
+     
+      });
+    }
+
+  }, [initialData, isEditing]);
 
   // Cleanup the image preview URL when component unmounts or image changes
   useEffect(() => {
@@ -179,7 +205,7 @@ const PostBoxForm = () => {
         "levelId",
         "jobTypeId",
         "experienceLevelId"
-      ].includes(name)
+      ].includes(name) 
         ? Number(value)
         : value
     }));
@@ -218,78 +244,147 @@ const PostBoxForm = () => {
     }
 
     if (!user?.userId || user.role !== 'Company') {
-      setError("You must login with a company account to post a job.");
+      setError("Bạn phải đăng nhập bằng tài khoản công ty để đăng tin tuyển dụng.");
+      return;
+    }
+
+    let statusToSendToBackend;
+    if (formData.status === "Pending") {
+      statusToSendToBackend = 0;
+    } else if (formData.status === "Active") {
+      statusToSendToBackend = 1;
+    } else if (formData.status === "Inactive") {
+      statusToSendToBackend = 2;
+    } else {
+      console.error("Trạng thái không hợp lệ:", formData.status);
+      setError("Trạng thái công việc không hợp lệ.");
       return;
     }
 
     try {
-      const postFormData = new FormData();
-      postFormData.append('Title', formData.title);
-      postFormData.append('Description', formData.description);
-      postFormData.append('CompanyId', user.userId);
-      postFormData.append('Salary', formData.salary);
-      postFormData.append('IndustryId', formData.industryId);
-      postFormData.append('ExpiryDate', formData.expiryDate);
-      postFormData.append('LevelId', formData.levelId);
-      postFormData.append('JobTypeId', formData.jobTypeId);
-      postFormData.append('ExperienceLevelId', formData.experienceLevelId);
-      postFormData.append('TimeStart', formData.timeStart);
-      postFormData.append('TimeEnd', formData.timeEnd);
-      postFormData.append('ProvinceName', formData.provinceName);
-      postFormData.append('AddressDetail', formData.addressDetail);
+      const commonData = {
+        title: formData.title,
+        description: formData.description,
+        salary: parseFloat(formData.salary),
+        industryId: formData.industryId,
+        levelId: formData.levelId,
+        jobTypeId: formData.jobTypeId,
+        experienceLevelId: formData.experienceLevelId,
+        expiryDate: formData.expiryDate ? new Date(formData.expiryDate).toISOString() : '',
+        timeStart: new Date(formData.timeStart).toISOString(),
+        timeEnd: new Date(formData.timeEnd).toISOString(),
+        provinceName: formData.provinceName,
+        addressDetail: formData.addressDetail,
+        status: statusToSendToBackend,
+      };
 
-      if (selectedImage) {
-        postFormData.append('ImageFile', selectedImage);
+      if (isEditing) {
+        // Cập nhật job
+        const updatedFormData = new FormData();
+        for (const key in commonData) {
+          if (commonData[key] !== undefined) {
+            if (key === 'status') {
+              updatedFormData.append('Status', statusToSendToBackend);
+            } else if (['salary', 'industryId', 'levelId', 'jobTypeId', 'experienceLevelId'].includes(key)) {
+              updatedFormData.append(key.charAt(0).toUpperCase() + key.slice(1), Number(commonData[key]));
+            } else if (['timeStart', 'timeEnd', 'expiryDate'].includes(key)) {
+              // Ensure dates are in ISO string format if they are date objects
+              const dateValue = commonData[key] instanceof Date ? commonData[key].toISOString() : commonData[key];
+              updatedFormData.append(key.charAt(0).toUpperCase() + key.slice(1), dateValue);
+            } else {
+              updatedFormData.append(key.charAt(0).toUpperCase() + key.slice(1), commonData[key]);
+            }
+          }
+        }
+        // Thêm các trường khác cần thiết cho PUT nếu có (ví dụ: jobId, CompanyId)
+        updatedFormData.append('Id', formData.jobId);
+        updatedFormData.append('CompanyId', formData.companyId); // Đảm bảo companyId được truyền cho cập nhật
+
+        // Nếu có ảnh mới được chọn để cập nhật
+        if (selectedImage) {
+          updatedFormData.append('ImageFile', selectedImage);
+        }
+
+        await ApiService.request(`Job/${formData.jobId}`, 'PUT', updatedFormData);
+        console.log("Job updated successfully");
+      } else {
+        // Tạo job mới
+        const postFormData = new FormData();
+        for (const key in commonData) {
+          if (commonData[key] !== undefined) {
+            if (key === 'status') {
+              postFormData.append('Status', statusToSendToBackend);
+            } else if (key === 'salary' || key === 'industryId' || key === 'levelId' || key === 'jobTypeId' || key === 'experienceLevelId') {
+              postFormData.append(key.charAt(0).toUpperCase() + key.slice(1), Number(commonData[key]));
+            } else if (key === 'timeStart' || key === 'timeEnd') {
+              postFormData.append(key.charAt(0).toUpperCase() + key.slice(1), commonData[key]);
+            } else {
+              postFormData.append(key.charAt(0).toUpperCase() + key.slice(1), commonData[key]);
+            }
+          }
+        }
+        postFormData.append('CompanyId', Number(user.userId));
+        if (selectedImage) {
+          postFormData.append('ImageFile', selectedImage);
+        }
+        await ApiService.createJob(postFormData);
+        console.log("Job created successfully");
       }
 
-      const result = await ApiService.createJob(postFormData);
-      console.log("API gọi thành công", result);
       setSuccess(true);
       setShowSuccessModal(true);
-      setFormData({
-        jobId: 0,
-        title: '',
-        description: '',
-        companyId: 0,
-        salary: "",
-        industryId: 0,
-        expiryDate: '',
-        levelId: 0,
-        jobTypeId: 0,
-        experienceLevelId: 0,
-        timeStart: '',
-        timeEnd: '',
-        status: 0,
-        provinceName: '',
-        addressDetail: '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
+      // Optionally reset form if creating a new job
+      if (!isEditing) {
+        setFormData({
+          jobId: 0,
+          title: '',
+          description: '',
+          companyId: 0,
+          salary: "",
+          industryId: 0,
+          expiryDate: '',
+          levelId: 0,
+          jobTypeId: 0,
+          experienceLevelId: 0,
+          timeStart: '',
+          timeEnd: '',
+          status: 0,
+          provinceName: '',
+          addressDetail: '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        setSelectedImage(null);
+        setImagePreviewUrl(null);
+      }
     } catch (error) {
-      console.error("API lỗi:", error);
-      setError("Tạo job thất bại: " + error.message);
+      console.error("API Error:", error.response?.data || error.message);
+      setError(error.response?.data?.message || `Failed to ${isEditing ? 'update' : 'create'} job. Please try again.`);
     }
   };
+
+  // Determine if status select should be disabled
+  const isStatusSelectDisabled = isEditing && formData.status === 0; // Disable if editing and status is Pending (0)
 
   return (
     <form className="default-form" onSubmit={handleSubmit}>
       <div className="row">
-        {/* Job Title */}
+        {error && <div className="message-box error">{error}</div>}
+        {success && <div className="message-box success">Job {isEditing ? 'updated' : 'posted'} successfully!</div>}
+
+        {/* <!-- Input Fields --> */}
         <div className="form-group col-lg-12 col-md-12">
           <label>Job Title</label>
-          <input 
-            type="text" 
-            name="title" 
+          <input
+            type="text"
+            name="title"
+            placeholder="Title"
             value={formData.title}
             onChange={handleInputChange}
-            placeholder="Enter job title" 
-            className={errors.title ? 'error' : ''}
-            disabled={isLoading}
           />
           {errors.title && <span className="error-message">{errors.title}</span>}
         </div>
 
-        {/* Job Description */}
         <div className="form-group col-lg-12 col-md-12">
           <label>Job Description</label>
           {isClient ? (
@@ -326,314 +421,202 @@ const PostBoxForm = () => {
           {errors.description && <span className="error-message">{errors.description}</span>}
         </div>
 
-        {/* Salary */}
         <div className="form-group col-lg-6 col-md-12">
-          <label>Salary</label>
-          <input 
-            type="number" 
-            name="salary" 
+          <label>Salary (USD)</label>
+          <input
+            type="number"
+            name="salary"
+            
             value={formData.salary}
             onChange={handleInputChange}
-            placeholder="Enter salary amount"
-            className={errors.salary ? 'error' : ''}
-            disabled={isLoading}
           />
           {errors.salary && <span className="error-message">{errors.salary}</span>}
         </div>
 
-        {/* Industry */}
+        <div className="form-group col-lg-6 col-md-12">
+          <label>Application Deadline</label>
+          <input
+            type="date"
+            name="expiryDate"
+            value={formData.expiryDate}
+            onChange={handleInputChange}
+          />
+          {errors.expiryDate && <span className="error-message">{errors.expiryDate}</span>}
+        </div>
+
+        <div className="form-group col-lg-6 col-md-12">
+          <label>Start Date</label>
+          <input
+            type="date"
+            name="timeStart"
+            value={formData.timeStart}
+            onChange={handleInputChange}
+          />
+          {errors.timeStart && <span className="error-message">{errors.timeStart}</span>}
+        </div>
+
+        <div className="form-group col-lg-6 col-md-12">
+          <label>End Date</label>
+          <input
+            type="date"
+            name="timeEnd"
+            value={formData.timeEnd}
+            onChange={handleInputChange}
+          />
+          {errors.timeEnd && <span className="error-message">{errors.timeEnd}</span>}
+        </div>
+
         <div className="form-group col-lg-6 col-md-12">
           <label>Industry</label>
-          <select 
-            name="industryId" 
+          <select
+            name="industryId"
+            className="chosen-single form-select"
             value={formData.industryId}
             onChange={handleInputChange}
-            className={`chosen-single form-select ${errors.industryId ? 'error' : ''}`}
-            disabled={isLoading}
           >
             <option value="">Select Industry</option>
-            {industries.map(ind => (
-              <option key={ind.industryId} value={ind.industryId}>{ind.industryName}</option>
+            {industries.map(industry => (
+              <option key={industry.industryId} value={industry.industryId}>
+                {industry.industryName}
+              </option>
             ))}
           </select>
           {errors.industryId && <span className="error-message">{errors.industryId}</span>}
         </div>
 
-        {/* Job Level */}
         <div className="form-group col-lg-6 col-md-12">
           <label>Job Level</label>
-          <select 
-            name="levelId" 
+          <select
+            name="levelId"
+            className="chosen-single form-select"
             value={formData.levelId}
             onChange={handleInputChange}
-            className={`chosen-single form-select ${errors.levelId ? 'error' : ''}`}
-            disabled={isLoading}
           >
-            <option value="">Select Level</option>
-            {levels.map((level, idx) => (
-              <option key={level.id || idx} value={level.id}>{level.levelName}</option>
+            <option value="">Select Job Level</option>
+            {levels.map(level => (
+              <option key={level.id} value={level.id}>
+                {level.levelName}
+              </option>
             ))}
           </select>
           {errors.levelId && <span className="error-message">{errors.levelId}</span>}
         </div>
 
-        {/* Job Type */}
         <div className="form-group col-lg-6 col-md-12">
           <label>Job Type</label>
-          <select 
-            name="jobTypeId" 
+          <select
+            name="jobTypeId"
+            className="chosen-single form-select"
             value={formData.jobTypeId}
             onChange={handleInputChange}
-            className={`chosen-single form-select ${errors.jobTypeId ? 'error' : ''}`}
-            disabled={isLoading}
           >
             <option value="">Select Job Type</option>
             {jobTypes.map(type => (
-              <option key={type.id} value={type.id}>{type.jobTypeName}</option>
+              <option key={type.id} value={type.id}>
+                {type.jobTypeName}
+              </option>
             ))}
           </select>
           {errors.jobTypeId && <span className="error-message">{errors.jobTypeId}</span>}
         </div>
 
-        {/* Experience Level */}
         <div className="form-group col-lg-6 col-md-12">
           <label>Experience Level</label>
-          <select 
-            name="experienceLevelId" 
+          <select
+            name="experienceLevelId"
+            className="chosen-single form-select"
             value={formData.experienceLevelId}
             onChange={handleInputChange}
-            className={`chosen-single form-select ${errors.experienceLevelId ? 'error' : ''}`}
-            disabled={isLoading}
           >
             <option value="">Select Experience Level</option>
             {experienceLevels.map(level => (
-              <option key={level.id} value={level.id}>{level.name}</option>
+              <option key={level.id} value={level.id}>
+                {level.name}
+              </option>
             ))}
           </select>
           {errors.experienceLevelId && <span className="error-message">{errors.experienceLevelId}</span>}
         </div>
 
-        {/* Expiry Date */}
-        <div className="form-group col-lg-6 col-md-12">
-          <label>Application Deadline</label>
-          <input 
-            type="date" 
-            name="expiryDate" 
-            value={formData.expiryDate}
-            onChange={handleInputChange}
-            className={`form-control ${errors.expiryDate ? 'error' : ''}`}
-            disabled={isLoading}
-          />
-          {errors.expiryDate && <span className="error-message">{errors.expiryDate}</span>}
-        </div>
-
-        {/* Time Start */}
-        <div className="form-group col-lg-6 col-md-12">
-          <label>Start Date</label>
-          <input 
-            type="date" 
-            name="timeStart" 
-            value={formData.timeStart}
-            onChange={handleInputChange}
-            className={`form-control ${errors.timeStart ? 'error' : ''}`}
-            disabled={isLoading}
-          />
-          {errors.timeStart && <span className="error-message">{errors.timeStart}</span>}
-        </div>
-
-        {/* Time End */}
-        <div className="form-group col-lg-6 col-md-12">
-          <label>End Date</label>
-          <input 
-            type="date" 
-            name="timeEnd" 
-            value={formData.timeEnd}
-            onChange={handleInputChange}
-            className={`form-control ${errors.timeEnd ? 'error' : ''}`}
-            disabled={isLoading}
-          />
-          {errors.timeEnd && <span className="error-message">{errors.timeEnd}</span>}
-        </div>
-
-        {/* Province Name */}
         <div className="form-group col-lg-6 col-md-12">
           <label>Province</label>
-          <select 
-            name="provinceName" 
+          <select
+            name="provinceName"
+            className="chosen-single form-select"
             value={formData.provinceName}
             onChange={handleInputChange}
-            className={errors.provinceName ? 'error' : ''}
-            disabled={isLoading}
           >
             <option value="">Select Province</option>
-            {provinces.map(p => (
-              <option key={p.code} value={p.name}>{p.name}</option>
+            {provinces.map(province => (
+              <option key={province.code} value={province.name}>
+                {province.name}
+              </option>
             ))}
           </select>
           {errors.provinceName && <span className="error-message">{errors.provinceName}</span>}
         </div>
 
-        {/* Address Detail */}
         <div className="form-group col-lg-6 col-md-12">
           <label>Address Detail</label>
-          <input 
-            type="text" 
-            name="addressDetail" 
+          <input
+            type="text"
+            name="addressDetail"
             value={formData.addressDetail}
             onChange={handleInputChange}
-            placeholder="Enter address detail"
-            className={errors.addressDetail ? 'error' : ''}
-            disabled={isLoading}
           />
           {errors.addressDetail && <span className="error-message">{errors.addressDetail}</span>}
         </div>
 
-        {/* Image File Input */}
-        
+        {isEditing && (
+          <div className="form-group col-lg-6 col-md-12">
+            <label>Status</label>
+            <select
+              name="status"
+              className="chosen-single form-select"
+              value={formData.status}
+              onChange={handleInputChange}
+              disabled={isStatusSelectDisabled}
+            >
+              {formData.status === "Pending" && <option value="Pending">Pending</option>}
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+            {isStatusSelectDisabled && (
+              <small className="form-text text-danger">You do not have permission to change when the job is in Pending status.</small>
+            )}
+          </div>
+        )}
 
-        {/* Submit Button */}
         <div className="form-group col-lg-12 col-md-12 text-right">
-          <button 
-            type="submit" 
-            className="theme-btn btn-style-one"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Posting...' : 'Post Job'}
+          <button type="submit" className="theme-btn btn-style-one">
+            {isEditing ? "Update Job" : "Post Job"}
           </button>
         </div>
       </div>
-
+      {/* Success Modal */}
       {showSuccessModal && (
         <div className="modal-overlay">
-          <div className="modal-content">
-            <h3>Success!</h3>
-            <p>Post job successfully!</p>
+          <div className="modal-content" style={{ textAlign: 'center', padding: 32, width: '100%', maxWidth: '350px', minWidth: '0' }}>
+            <h2 style={{ color: 'green' }}>Success!</h2>
+            <p>Job {isEditing ? 'updated' : 'posted'} successfully!</p>
             <button
-              className="theme-btn btn-style-one"
-              onClick={(e) => {
-                e.preventDefault();
-                setShowSuccessModal(false);
-                setErrors({});
-                setFormData({
-                  jobId: 0,
-                  title: '',
-                  description: '',
-                  companyId: 0,
-                  salary: "",
-                  industryId: 0,
-                  expiryDate: '',
-                  levelId: 0,
-                  jobTypeId: 0,
-                  experienceLevelId: 0,
-                  timeStart: '',
-                  timeEnd: '',
-                  status: 0,
-                  provinceName: '',
-                  addressDetail: '',
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString()
-                });
+              style={{
+                background: '#0d47a1',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 6,
+                padding: '12px 32px',
+                fontSize: 18,
+                marginTop: 16,
+                cursor: 'pointer'
               }}
+              onClick={() => setShowSuccessModal(false)}
             >
               Close
             </button>
           </div>
         </div>
       )}
-
-      <style jsx>{`
-        .form-control {
-          width: 100%;
-          padding: 10px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          font-size: 14px;
-          background-color: #fff;
-        }
-        .form-group {
-          margin-bottom: 20px;
-        }
-        .form-control:focus {
-          outline: none;
-          border-color: #4a90e2;
-          box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
-        }
-        select.form-select {
-          padding: 10px;
-          height: auto;
-          background-position: right 10px center;
-        }
-        .error {
-          border-color: #dc3545 !important;
-        }
-        .error-message {
-          background: none !important;
-          padding: 0 !important;
-          color: #dc3545;
-          font-size: 12px;
-          margin-top: 5px;
-          display: block;
-          border: none !important;
-          box-shadow: none !important;
-          text-align: left;
-        }
-        input[type="date"] {
-          cursor: pointer;
-        }
-        input[type="date"]::-webkit-calendar-picker-indicator {
-          cursor: pointer;
-          padding: 5px;
-        }
-        button:disabled {
-          opacity: 0.7;
-          cursor: not-allowed;
-        }
-        .theme-btn {
-          position: relative;
-        }
-        .theme-btn:disabled {
-          background-color: #ccc;
-        }
-        .modal-overlay {
-          position: fixed;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: rgba(0,0,0,0.4);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 9999;
-        }
-        .modal-content {
-          background: #fff;
-          border-radius: 8px;
-          padding: 24px 16px;
-          text-align: center;
-          width: 100%;
-          max-width: 350px;
-          min-width: 0;
-          box-shadow: 0 4px 24px rgba(0,0,0,0.15);
-          box-sizing: border-box;
-        }
-        @media (max-width: 400px) {
-          .modal-content {
-            max-width: 95vw;
-            padding: 16px 4vw;
-          }
-        }
-        .modal-content h3 {
-          margin-bottom: 12px;
-          color: #28a745;
-        }
-        .modal-content button {
-          margin-top: 16px;
-        }
-        label {
-          font-weight: 500;
-          color: #333;
-          margin-bottom: 8px;
-          display: block;
-        }
-      `}</style>
     </form>
   );
 };

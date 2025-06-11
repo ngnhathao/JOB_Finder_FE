@@ -8,11 +8,14 @@ import HeaderNavContent from "./HeaderNavContent";
 import { isActiveLink } from "../../utils/linkActiveChecker";
 import { usePathname } from "next/navigation";
 import { authService } from "../../services/authService";
+import { useSelector } from "react-redux";
 
 const DashboardCandidatesHeader = () => {
     const [navbar, setNavbar] = useState(false);
     const [fullName, setFullName] = useState("Tài khoản của tôi");
     const [avatar, setAvatar] = useState("/images/resource/candidate-1.png");
+
+    const { isLoggedIn, user, role } = useSelector((state) => state.auth); // Added useSelector
 
     const changeBackground = () => {
         if (typeof window !== 'undefined' && window.scrollY >= 0) {
@@ -26,22 +29,21 @@ const DashboardCandidatesHeader = () => {
         if (typeof window !== 'undefined') {
             window.addEventListener("scroll", changeBackground);
             
-            // Lấy thông tin user từ localStorage (nếu có)
             const user = JSON.parse(localStorage.getItem('user') || '{}');
             if (user.fullName) setFullName(user.fullName);
             else if (user.name) setFullName(user.name);
             else {
-                // Nếu không có trong localStorage, thử lấy từ cookie
                 const userName = authService.getName();
                 if (userName) {
                     setFullName(userName);
                 }
             }
-            // Lấy avatar từ localStorage
-            if (user.avatar) {
+            if (user.image) {
+                setAvatar(user.image);
+            } else if (user.avatar) {
                 setAvatar(user.avatar);
             } else {
-                setAvatar("/images/resource/candidate-1.png"); // Default avatar if not found
+                setAvatar("/images/resource/candidate-1.png");
             }
         }
     }, []);

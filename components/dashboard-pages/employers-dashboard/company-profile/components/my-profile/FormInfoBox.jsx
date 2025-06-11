@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Select from "react-select";
 import axios from 'axios';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 const FormInfoBox = ({ onFormChange, validationErrors, initialData, isEditing }) => {
     const [formData, setFormData] = useState({
@@ -78,6 +80,20 @@ const FormInfoBox = ({ onFormChange, validationErrors, initialData, isEditing })
              const updatedFormData = {
                 ...formData,
                 [name]: processedValue,
+            };
+            onFormChange(updatedFormData);
+        }
+    };
+
+    const handleAboutCompanyChange = (value) => {
+        setFormData(prevState => ({
+            ...prevState,
+            aboutCompany: value,
+        }));
+        if (onFormChange) {
+            const updatedFormData = {
+                ...formData,
+                aboutCompany: value,
             };
             onFormChange(updatedFormData);
         }
@@ -191,14 +207,31 @@ const FormInfoBox = ({ onFormChange, validationErrors, initialData, isEditing })
                 {/* <!-- About Company - CompanyProfileDescription --> */}
                 <div className="form-group col-lg-12 col-md-12">
                     <label>About Company</label>
-                    <textarea
-                        name="aboutCompany"
+                    <ReactQuill
+                        className="job-description-quill"
+                        theme="snow"
                         value={formData.aboutCompany}
-                        onChange={handleInputChange}
-                        required
-                         className={validationErrors.aboutCompany ? 'form-control is-invalid' : 'form-control'}
-                        disabled={!isEditing}
-                    ></textarea>
+                        onChange={handleAboutCompanyChange}
+                        modules={{
+                            toolbar: [
+                                [{ 'header': [1, 2, false] }],
+                                ['bold', 'italic', 'underline', 'strike', 'link'],
+                                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                                [{ 'script': 'sub' }, { 'script': 'super' }],
+                                [{ 'indent': '-1' }, { 'indent': '+1' }],
+                                [{ 'direction': 'rtl' }],
+                                [{ 'size': ['small', false, 'large', 'huge'] }],
+                                [{ 'color': [] }, { 'background': [] }],
+                                [{ 'align': [] }],
+                                ['clean']
+                            ],
+                        }}
+                        formats={[
+                            'header', 'bold', 'italic', 'underline', 'strike', 'blockquote', 'list', 'bullet', 'indent',
+                            'link', 'image', 'color', 'background', 'align', 'size',
+                        ]}
+                        placeholder="Enter about company description"
+                    />
                     {validationErrors.aboutCompany && <div className="invalid-feedback">{validationErrors.aboutCompany}</div>}
                 </div>
             </div>

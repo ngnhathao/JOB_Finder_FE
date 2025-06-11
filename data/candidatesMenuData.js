@@ -77,6 +77,7 @@ module.exports = [
     active: "",
     isLogout: true,
   },
+
   {
     id: 12,
     name: "Delete Profile",
@@ -91,4 +92,5 @@ module.exports = [
     routePath: "/candidates-dashboard/favorite-companies",
     active: "",
   },
+
 ];

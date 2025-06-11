@@ -110,6 +110,7 @@ const FilterJobsBox = () => {
         setExperienceLevels(expLevelsRes);
         setIndustries(industriesRes);
         console.log('Lookup data fetched', { companiesRes, jobTypesRes, expLevelsRes, industriesRes });
+        console.log('Current companies state after fetch:', companiesRes);
       } catch (err) {
         // Catch block này có thể không cần thiết nữa nếu các catch riêng lẻ hoạt động
         console.error('An unexpected error occurred during lookup data fetching', err);
@@ -176,6 +177,7 @@ const FilterJobsBox = () => {
   // Helper function để tìm tên từ ID trong dữ liệu lookup
   const getCompanyName = (companyId) => {
       const company = companies.find(c => c.id === companyId);
+      console.log(`getCompanyName for companyId ${companyId}:`, company);
       return company ? company.name : 'N/A';
   };
 
@@ -290,12 +292,13 @@ const FilterJobsBox = () => {
           <div className="content">
             {/* Restored Company Logo */}
              <span className="company-logo">
-               {/* Sử dụng item.logo từ API cho ảnh công ty */}
-               {item.logo ? (
-                 <Image width={50} height={49} src={item.logo} alt={getCompanyName(item.companyId)} />
-               ) : (
-                 <Image width={50} height={49} src={'/images/company-logo/default-logo.png'} alt={getCompanyName(item.companyId)} />
-               )}
+               {(() => {
+                 const company = companies.find(c => c.id === item.companyId);
+                 const logoSrc = company?.logo || '/images/company-logo/default-logo.png';
+                 const companyName = company?.name || getCompanyName(item.companyId);
+                 console.log(`Job ID: ${item.jobId}, Company ID: ${item.companyId}, Company: ${company?.name}, Logo Source: ${logoSrc}`);
+                 return <Image width={50} height={49} src={logoSrc} alt={companyName} />;
+               })()}
              </span>
             {/* Restored Job Title */}
              <h4>

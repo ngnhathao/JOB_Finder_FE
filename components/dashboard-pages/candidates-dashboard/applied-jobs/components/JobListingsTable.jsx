@@ -188,7 +188,8 @@ const JobListingsTable = () => {
                     <div className="job-details">
                       <div className="description">
                         <h5>Description:</h5>
-                        <p>{job.description}</p>
+                     
+                        <div dangerouslySetInnerHTML={{ __html: job.description }} />
                       </div>
                       
                       <div className="applied-cvs">

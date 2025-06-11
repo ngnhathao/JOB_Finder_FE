@@ -8,13 +8,19 @@ import HeaderNavContent from "./HeaderNavContent";
 import { isActiveLink } from "../../utils/linkActiveChecker";
 import { usePathname } from "next/navigation";
 import { useSelector } from "react-redux";
+import { authService } from "../../services/authService";
+import { clearLoginState } from "../../features/auth/authSlice";
+import { useRouter } from "next/navigation";
+import { useDispatch } from "react-redux";
 
 
 const DashboardHeader = () => {
     const [navbar, setNavbar] = useState(false);
 
     // Get user data from Redux store
-    const { user } = useSelector((state) => state.auth);
+    const { user, isLoggedIn, role } = useSelector((state) => state.auth);
+    const dispatch = useDispatch();
+    const router = useRouter();
 
     // Use state for user info to handle updates
     const [displayUserName, setDisplayUserName] = useState("My Account");
@@ -59,6 +65,12 @@ const DashboardHeader = () => {
     useEffect(() => {
         window.addEventListener("scroll", changeBackground);
     }, []);
+
+    const handleLogout = () => {
+        authService.logout(); // Clear localStorage
+        dispatch(clearLoginState()); // Clear Redux state
+        router.push("/login"); // Redirect to login page
+    };
 
     return (
         // <!-- Main Header-->
@@ -135,12 +147,19 @@ const DashboardHeader = () => {
                                         } mb-1`}
                                         key={item.id}
                                     >
-                                        <Link href={item.routePath}>
-                                            <i
-                                                className={`la ${item.icon}`}
-                                            ></i>{" "}
-                                            {item.name}
-                                        </Link>
+                                        {item.isLogout ? (
+                                            <a onClick={handleLogout} style={{ cursor: 'pointer' }}>
+                                                <i className={`la ${item.icon}`}></i>{" "}
+                                                {item.name}
+                                            </a>
+                                        ) : (
+                                            <Link href={item.routePath}>
+                                                <i
+                                                    className={`la ${item.icon}`}
+                                                ></i>{" "}
+                                                {item.name}
+                                            </Link>
+                                        )}
                                     </li>
                                 ))}
                             </ul>

@@ -105,6 +105,10 @@ const API_CONFIG = {
       GET_BY_CANDIDATE: (candidateId) => `applications/candidate/${candidateId}`,
       GET_BY_COMPANY: (companyId) => `applications/company/${companyId}`,
     },
+    CANDIDATE_PROFILE: {
+      BASE: 'CandidateProfile',
+      GET_BY_ID: (id) => `CandidateProfile/${id}`,
+    },
     NOTIFICATION: {
       BASE: 'notifications',
       MARK_READ: (id) => `notifications/${id}/read`,
@@ -120,6 +124,10 @@ const API_CONFIG = {
       CV: 'upload/cv',
       COMPANY_LOGO: 'upload/company-logo',
       JOB_IMAGE: 'upload/job-image',
+    },
+    SKILL: {
+      BASE: 'Skill',
+      GET_BY_ID: (id) => `Skill/${id}`,
     },
     LEVEL: '/Level',
     JOB_TYPE: '/JobType',
@@ -169,6 +177,5 @@ const API_CONFIG = {
     return response.json();
   }
 };
-
 
 export default API_CONFIG; 

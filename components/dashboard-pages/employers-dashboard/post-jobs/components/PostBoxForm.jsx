@@ -84,9 +84,14 @@ const PostBoxForm = ({ initialData, isEditing }) => {
 
     if (isEditing && initialData) {
       const initialStatusForForm = initialData.status === 0 ? "Pending" : initialData.status === 1 ? "Active" : initialData.status === 2 ? "Inactive" : "Pending";
+      
+      console.log("initialData.salary BEFORE cleanup:", initialData.salary);
+      const cleanedSalary = initialData.salary != null ? String(initialData.salary).replace(/[^0-9.]/g, '') : "";
+      console.log("initialData.salary AFTER cleanup:", cleanedSalary);
+
       setFormData({
         ...initialData,
-        salary: String(initialData.salary),
+        salary: cleanedSalary,
         industryId: initialData.industryId || 0,
         levelId: initialData.levelId || 0,
         jobTypeId: initialData.jobTypeId || 0,
@@ -95,6 +100,7 @@ const PostBoxForm = ({ initialData, isEditing }) => {
         timeStart: initialData.timeStart ? initialData.timeStart.split('T')[0] : '',
         timeEnd: initialData.timeEnd ? initialData.timeEnd.split('T')[0] : '',
         status: initialStatusForForm,
+     
       });
     }
 

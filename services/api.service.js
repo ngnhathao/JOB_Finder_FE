@@ -155,6 +155,20 @@ class ApiServiceClass {
     const options = API_CONFIG.getRequestOptions();
     return API_CONFIG.handleResponse(await fetch(url, options));
   }
+
+  // Candidate Profile APIs
+  static async getCandidateProfileById(id) {
+    const url = API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.CANDIDATE_PROFILE.GET_BY_ID(id));
+    const options = API_CONFIG.getRequestOptions();
+    return API_CONFIG.handleResponse(await fetch(url, options));
+  }
+
+  // Skill APIs
+  static async getSkillById(id) {
+    const url = API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.SKILL.GET_BY_ID(id));
+    const options = API_CONFIG.getRequestOptions();
+    return API_CONFIG.handleResponse(await fetch(url, options));
+  }
 }
 
 // Sau đó tạo object từ class
@@ -209,7 +223,9 @@ const ApiService = {
     const options = { method: 'DELETE' };
     return fetch(url, options);
   },
-  getCompanyProfileById: ApiServiceClass.getCompanyProfileById
+  getCompanyProfileById: ApiServiceClass.getCompanyProfileById,
+  getCandidateProfileById: ApiServiceClass.getCandidateProfileById,
+  getSkillById: ApiServiceClass.getSkillById
 };
 
 export default ApiService; 

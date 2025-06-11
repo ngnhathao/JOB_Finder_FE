@@ -254,8 +254,8 @@ export const jobService = {
 
       return mappedJob;
     } catch (error) {
-      console.error(`Error fetching job with ID ${id} from backend API:`, error);
-      throw error; // Ném lỗi để component gọi xử lý
+      console.error(`Error fetching job by ID ${id} from backend API:`, error);
+      return null; // Trả về null hoặc xử lý lỗi tùy theo yêu cầu
     }
   },
 
@@ -447,6 +447,27 @@ export const jobService = {
         console.error("Error response status:", error.response.status);
       }
       throw error;
+    }
+  },
+
+  async getJobApplicants(jobId) {
+    try {
+      console.log("getJobApplicants function called.");
+      const token = Cookies.get('token');
+      console.log("Auth Token from Cookies:", token ? "Present" : "Missing"); // Log token status
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      };
+      console.log(`Fetching applicants for job ID: ${jobId} with config:`, config);
+      const response = await axios.get(`${API_URL}/Application/job/${jobId}`, config);
+      console.log("API Response for job applicants:", response.data);
+      return response.data; // Trả về danh sách ứng viên
+    } catch (error) {
+      console.error(`Error fetching applicants for job ID ${jobId}:`, error);
+      throw error; // Ném lỗi để component xử lý
     }
   },
 

@@ -100,7 +100,7 @@ const JobListingsTable = () => {
             <thead>
               <tr>
                 <th>Title</th>
-                <th>Applications</th>
+                <th>Applicants</th>
                 <th>Created & Expired</th>
                 <th>Status</th>
                 <th>Action</th>
@@ -135,7 +135,9 @@ const JobListingsTable = () => {
                     </div>
                   </td>
                   <td className="applied">
-                    <a href="#">3+ Applied</a>
+                    <Link href={`/employers-dashboard/all-applicants?jobId=${job.id}`}>
+                      View Applied
+                    </Link>
                   </td>
                   <td>
                     {formatDateVN(job.timeStart)} <br />

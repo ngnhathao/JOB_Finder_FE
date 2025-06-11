@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { jobService } from "../../../../../services/jobService";
-import ApiService from "../../../../../services/api.service";
+import { applicationService } from "@/services/applicationService";
+import ApiService from "@/services/api.service";
 import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
 import Link from "next/link";
 import Image from "next/image";
@@ -20,12 +19,11 @@ const getValidImageUrl = (url) => {
   return null; // Invalid URL
 };
 
-const WidgetContentBox = () => {
+const WidgetContentBox = ({ jobId }) => {
   const [applicants, setApplicants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [jobTitle, setJobTitle] = useState("");
-  const searchParams = useSearchParams();
-  const jobId = searchParams.get('jobId');
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     console.log("WidgetContentBox: useEffect triggered for jobId:", jobId);
@@ -38,7 +36,7 @@ const WidgetContentBox = () => {
       try {
         setLoading(true);
         console.log("WidgetContentBox: Attempting to fetch job details for jobId:", jobId);
-        const jobDetails = await jobService.getJobById(jobId);
+        const jobDetails = await ApiService.getJobById(jobId);
         if (jobDetails && jobDetails.title) {
           setJobTitle(jobDetails.title);
         } else {
@@ -47,7 +45,7 @@ const WidgetContentBox = () => {
         console.log("WidgetContentBox: Job details fetched.", jobDetails);
 
         console.log("WidgetContentBox: Attempting to fetch applicants for jobId:", jobId);
-        const response = await jobService.getJobApplicants(jobId);
+        const response = await applicationService.getJobApplicants(jobId);
         console.log("WidgetContentBox: API Response data (applications only):", response);
 
         if (response && response.length > 0) {
@@ -64,11 +62,13 @@ const WidgetContentBox = () => {
                 }
 
               } catch (profileError) {
+                console.error("Error fetching candidate profile:", profileError);
               }
 
               try {
                 userDetails = await ApiService.getUserById(applicant.userId);
               } catch (userError) {
+                console.error("Error fetching user details:", userError);
               }
 
               return {
@@ -88,15 +88,14 @@ const WidgetContentBox = () => {
           setApplicants([]);
         }
       } catch (error) {
+        console.error("Error fetching data:", error);
+        setError(error.message || "Failed to fetch data");
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-
-    return () => {
-    };
   }, [jobId]);
 
   const totalApplicants = applicants.length;
@@ -109,6 +108,10 @@ const WidgetContentBox = () => {
 
   if (!jobId) {
     return <div className="text-center py-5">No job selected</div>;
+  }
+
+  if (error) {
+    return <div className="text-center py-5 text-danger">{error}</div>;
   }
 
   if (totalApplicants === 0 && !loading) {

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { useRouter } from "next/navigation";
 import Cookies from 'js-cookie';
+import { applicationService } from "@/services/applicationService";
 
 const ApplyJobModalContent = ({ jobId }) => {
   const router = useRouter();
@@ -106,26 +106,15 @@ const ApplyJobModalContent = ({ jobId }) => {
       formDataToSend.append("CoverLetter", formData.coverLetter);
       formDataToSend.append("CvFile", formData.cvFile);
 
-      const response = await axios.post(
-        "https://localhost:7266/api/Application/apply",
-        formDataToSend,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            "Authorization": `Bearer ${token}`
-          }
-        }
-      );
-
-      if (response.data) {
-        setSuccess("Applied successfully!");
-        // Hiện thông báo 1.5 giây rồi đóng modal
-        setTimeout(() => {
-          document.querySelector('#applyJobModal .closed-modal')?.click();
-          // Nếu muốn redirect sau khi đóng modal, bỏ comment dòng dưới:
-          router.push("/candidates-dashboard/applied-jobs");
-        }, 1500);
-      }
+      await applicationService.apply(jobId, formDataToSend);
+      
+      setSuccess("Applied successfully!");
+      // Hiện thông báo 1.5 giây rồi đóng modal
+      setTimeout(() => {
+        document.querySelector('#applyJobModal .closed-modal')?.click();
+        // Nếu muốn redirect sau khi đóng modal, bỏ comment dòng dưới:
+        router.push("/candidates-dashboard/applied-jobs");
+      }, 1500);
     } catch (error) {
       console.error("Error applying for job:", error);
       setError(error.response?.data?.message || "Failed to apply for the job. Please try again.");

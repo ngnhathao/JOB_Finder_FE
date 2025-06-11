@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "https://localhost:7266/api";
+const API_URL = "http://localhost:5194/api";
 
 // Hàm lấy token từ localStorage hoặc cookie
 function getToken() {
@@ -12,15 +12,6 @@ function getToken() {
 }
 
 export const companyService = {
-  async getCompanyById(companyId) {
-    try {
-      const response = await axios.get(`${API_URL}/Company/${companyId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching company:', error);
-      throw error;
-    }
-  },
   getFavoriteCompanies: async () => {
     try {
       const token = getToken();
@@ -73,6 +64,45 @@ export const companyService = {
       return response.data;
     } catch (error) {
       console.error("Error unfavoriting company:", error);
+      throw error;
+    }
+  },
+
+  async filterCompanies(params = {}) {
+    try {
+      const queryParams = new URLSearchParams();
+      
+      // Map parameters to match API expectations
+      if (params.keyword) queryParams.append("CompanyName", params.keyword);
+      if (params.location) queryParams.append("Location", params.location);
+      if (params.industry && params.industry !== "") queryParams.append("IndustryId", params.industry);
+      if (params.companySize && params.companySize !== "") queryParams.append("TeamSize", params.companySize);
+      
+      // Add pagination
+      queryParams.append("page", params.page || 1);
+      queryParams.append("limit", params.limit || 10);
+
+      const response = await axios.get(`${API_URL}/CompanyProfile/filter?${queryParams.toString()}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+
+      // Handle both array and object response formats
+      if (Array.isArray(response.data)) {
+        return {
+          data: response.data,
+          totalCount: response.data.length
+        };
+      }
+      
+      return {
+        data: response.data.data || [],
+        totalCount: response.data.totalCount || 0
+      };
+    } catch (error) {
+      console.error("Error fetching filtered companies:", error);
       throw error;
     }
   },

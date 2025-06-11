@@ -2,23 +2,31 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { industryService } from "@/services/industryService";
 
 const JobCategorie1 = () => {
   const [industries, setIndustries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchIndustries = async () => {
       try {
-        const res = await fetch("https://localhost:7266/api/Industry");
-        const data = await res.json();
+        const data = await industryService.getAll();
         setIndustries(data);
-      } catch (error) {
-        console.error("Error fetching industries:", error);
+      } catch (err) {
+        console.error("Error fetching industries:", err);
+        setError("Failed to load industries");
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchIndustries();
   }, []);
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>{error}</div>;
 
   return (
     <>

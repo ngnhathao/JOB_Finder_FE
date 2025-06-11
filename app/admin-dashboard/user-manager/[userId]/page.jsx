@@ -7,6 +7,7 @@ import BreadCrumb from "@/components/dashboard-pages/BreadCrumb";
 import Image from "next/image";
 import ApiService from "@/services/api.service";
 import { Modal, Button } from "antd";
+import { userService } from "@/services/userService";
 
 const UserDetailPage = () => {
   const params = useParams();
@@ -17,6 +18,7 @@ const UserDetailPage = () => {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -33,7 +35,21 @@ const UserDetailPage = () => {
     fetchUser();
   }, [userId]);
 
+  const handleVerify = async () => {
+    try {
+      setLoading(true);
+      await userService.verifyCandidate(userIdInt);
+      // Handle success
+    } catch (err) {
+      console.error("Error verifying candidate:", err);
+      setError("Failed to verify candidate");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
+  if (error) return <div>{error}</div>;
   if (!user) return <div>User not found</div>;
 
   // Fake data bổ sung cho các trường còn thiếu
@@ -115,41 +131,7 @@ const UserDetailPage = () => {
                             <Button
                               type="primary"
                               loading={confirmLoading}
-                              onClick={async () => {
-                                setConfirmLoading(true);
-                                try {
-                                  console.log(`Calling verify API for userId: ${userIdInt}`);
-                                  const token = localStorage.getItem('token');
-                                  const headers = {};
-                                  if (token) {
-                                    headers['Authorization'] = `Bearer ${token}`;
-                                  }
-                                  
-                                  const response = await fetch(`https://localhost:7266/api/CandidateToCompany/verify/${userIdInt}`, {
-                                    method: 'POST',
-                                    headers: headers,
-                                  });
-                                  console.log('Verify API response status:', response.status);
-                                  const responseData = await response.text();
-                                  console.log('Verify API response data:', responseData);
-
-                                  if (!response.ok) {
-                                    throw new Error(`API call failed with status ${response.status}: ${responseData}`);
-                                  }
-
-                                  setConfirmModalOpen(false);
-                                  setSuccessModalOpen(true);
-                                } catch (err) {
-                                  console.error('Error setting user to recruiter:', err);
-                                  setConfirmModalOpen(false);
-                                  Modal.error({
-                                    title: 'Error',
-                                    content: 'this candidate does not have request to become a recruiter',
-                                  });
-                                } finally {
-                                  setConfirmLoading(false);
-                                }
-                              }}
+                              onClick={handleVerify}
                               style={{ minWidth: 64, _hover: { backgroundColor: '#0c4b8e', borderColor: '#0c4b8e' } }}
                             >Yes</Button>
                           </div>

@@ -2,11 +2,10 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import Cookies from "js-cookie";
-import axios from "axios";
-import jobService from "@/services/jobService";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
+import { applicationService } from "@/services/applicationService";
 
 const JobListingsTable = () => {
   const router = useRouter();
@@ -39,7 +38,7 @@ const JobListingsTable = () => {
     const fetchAppliedJobs = async () => {
       try {
         setLoading(true);
-        const response = await jobService.getAppliedJobs();
+        const response = await applicationService.getAppliedJobs();
         setAppliedJobs(response);
         setFilteredJobs(response);
         setError(null);

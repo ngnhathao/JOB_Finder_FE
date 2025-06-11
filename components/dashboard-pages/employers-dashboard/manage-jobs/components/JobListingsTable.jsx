@@ -144,7 +144,6 @@ const JobListingsTable = () => {
                     {formatDateVN(job.timeEnd)}
                   </td>
                   <td className="status">
-<<<<<<< HEAD
                     {job.status === 0 ? (
                       <span className="status-pending">Pending</span>
                     ) : job.status === 1 ? (
@@ -154,9 +153,6 @@ const JobListingsTable = () => {
                     ) : (
                       <span className="status-unknown">Unknown</span>
                     )}
-=======
-                    {job.status === 0 ? "Pending" : job.status === 1 ? "Active" : job.status === 2 ? "Inactive" : job.status}
->>>>>>> 940787f (update status job role company)
                   </td>
                   <td>
                     <div className="option-box">

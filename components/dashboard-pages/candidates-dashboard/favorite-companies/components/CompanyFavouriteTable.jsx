@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { companyService } from "../../../../../services/companyService";
 import { useRouter } from "next/navigation";
 import { toast } from 'react-toastify';
+import { industryService } from "@/services/industryService";
 
 const CompanyFavouriteTable = () => {
   const [companies, setCompanies] = useState([]);
@@ -15,18 +16,19 @@ const CompanyFavouriteTable = () => {
   const [isLoadingUnfavorite, setIsLoadingUnfavorite] = useState(false);
   const router = useRouter();
 
-  // Fetch industries for mapping industryId to name
   useEffect(() => {
     const fetchIndustries = async () => {
       try {
-        const res = await fetch("https://localhost:7266/api/Industry");
-        if (!res.ok) return;
-        const data = await res.json();
+        const data = await industryService.getAll();
         setIndustries(data);
       } catch (err) {
-        setIndustries([]);
+        console.error("Error fetching industries:", err);
+        setError("Failed to load industries");
+      } finally {
+        setLoading(false);
       }
     };
+
     fetchIndustries();
   }, []);
 
@@ -72,21 +74,12 @@ const CompanyFavouriteTable = () => {
     }
   };
 
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>{error}</div>;
+
   return (
     <div className="ls-outer">
-      {loading ? (
-        <div className="text-center py-5">Loading...</div>
-      ) : error ? (
-        <div className="text-center py-5">
-          <p className="text-danger mb-3">{error}</p>
-          <button 
-            onClick={handleLogin}
-            className="theme-btn btn-style-one"
-          >
-            Login Now
-          </button>
-        </div>
-      ) : companies.length === 0 ? (
+      {companies.length === 0 ? (
         <div className="text-center py-5">No favorite companies found</div>
       ) : (
         companies.map((company) => (

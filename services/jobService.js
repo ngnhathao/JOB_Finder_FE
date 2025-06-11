@@ -3,7 +3,7 @@
 import axios from "axios";
 import Cookies from 'js-cookie';
 
-const API_URL = "https://localhost:7266/api";
+const API_URL = "http://localhost:5194/api";
 
 // Cấu hình axios
 axios.defaults.headers.common['Content-Type'] = 'application/json';
@@ -288,7 +288,7 @@ export const jobService = {
     }
   },
 
-  getExperienceLevels: async () => {
+  async getExperienceLevels() {
     try {
       const response = await axios.get(`${API_URL}/ExperienceLevels`);
       return response.data;
@@ -298,7 +298,7 @@ export const jobService = {
     }
   },
 
-  getIndustries: async () => {
+  async getIndustries() {
     try {
       const response = await axios.get(`${API_URL}/Industry`);
       return response.data;

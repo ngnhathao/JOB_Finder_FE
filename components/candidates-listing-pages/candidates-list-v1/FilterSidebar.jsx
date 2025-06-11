@@ -1,3 +1,6 @@
+'use client'
+
+import { useState, useEffect } from "react";
 import Categories from "../components/Categories";
 import DestinationRangeSlider from "../components/DestinationRangeSlider";
 import CandidatesGender from "../components/CandidatesGender";
@@ -6,8 +9,32 @@ import SearchBox from "../components/SearchBox";
 import DatePosted from "../components/DatePosted";
 import Experience from "../components/Experience";
 import Qualification from "../components/Qualification";
+import locationService from "@/services/locationService";
 
 const FilterSidebar = () => {
+    const [provinces, setProvinces] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchProvinces = async () => {
+            try {
+                const provincesData = await locationService.getProvinces();
+                setProvinces(provincesData);
+            } catch (err) {
+                console.error('Error fetching provinces:', err);
+                setError('Failed to load location data');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProvinces();
+    }, []);
+
+    if (loading) return <div className="inner-column">Loading filters...</div>;
+    if (error) return <div className="inner-column text-danger">{error}</div>;
+
     return (
         <div className="inner-column pd-right">
             <div className="filters-outer">
@@ -30,7 +57,7 @@ const FilterSidebar = () => {
                 <div className="filter-block">
                     <h4>Location</h4>
                     <div className="form-group">
-                        <LocationBox />
+                        <LocationBox provinces={provinces} />
                     </div>
 
                     <p>Radius around selected destination</p>

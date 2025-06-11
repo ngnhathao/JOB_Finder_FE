@@ -11,7 +11,8 @@ import LocationBox from "../components/LocationBox";
 import SalaryRangeSlider from "../components/SalaryRangeSlider";
 import SearchBox from "../components/SearchBox";
 import Tag from "../components/Tag";
-import { jobService } from "../../../services/jobService";
+import { jobService } from "@/services/jobService";
+import locationService from "@/services/locationService";
 
 const FilterSidebar = () => {
   // Thêm state để lưu dữ liệu lookup trong FilterSidebar
@@ -66,12 +67,12 @@ const FilterSidebar = () => {
           jobService.getJobTypes(),
           jobService.getExperienceLevels(),
           jobService.getIndustries(),
-          jobService.getProvinces(), // Fetch provinces
+          locationService.getProvinces(), // Sử dụng locationService thay vì gọi API trực tiếp
         ]);
         setJobTypesData(jobTypesRes);
         setExperienceLevels(expLevelsRes);
         setIndustries(industriesRes);
-        setProvinces(provincesRes); // Set provinces state
+        setProvinces(provincesRes);
         console.log('Lookup data fetched in FilterSidebar', { jobTypesRes, expLevelsRes, industriesRes, provincesRes });
       } catch (err) {
         setLookupDataError('Failed to fetch lookup data in sidebar');

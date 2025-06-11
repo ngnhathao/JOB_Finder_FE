@@ -104,7 +104,7 @@ const FormInfoBox = ({ onFormChange, validationErrors, initialData, isEditing })
             <div className="row">
                 {/* <!-- Input - Company Name --> */}
                 <div className="form-group col-lg-6 col-md-12">
-                    <label>Company name (optional)</label>
+                    <label>Company name</label>
                     <input
                         type="text"
                         name="companyName"

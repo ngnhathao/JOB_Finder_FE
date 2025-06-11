@@ -15,6 +15,7 @@ import JobOverView2 from "@/components/job-single-pages/job-overview/JobOverView
 import ApplyJobModalContent from "@/components/job-single-pages/shared-components/ApplyJobModalContent";
 import Image from "next/image";
 import { companyService } from "@/services/companyService";
+import { companyProfileService } from "@/services/companyProfileService";
 import DefaulHeader2 from "@/components/header/DefaulHeader2";
 import ApiService from "@/services/api.service";
 import API_CONFIG from "@/config/api.config";
@@ -45,9 +46,12 @@ const JobSingleDynamicV3 = ({ params }) => {
         setExperienceLevels(experienceLevelsResponse);
 
         if (jobResponse?.companyId) {
-          companyService.getCompanyById(jobResponse.companyId)
+          companyProfileService.getCompanyProfile(jobResponse.companyId)
             .then(setCompany)
-            .catch(() => setCompany(null));
+            .catch((err) => {
+                console.error("Error fetching company profile:", err);
+                setCompany(null);
+            });
         }
 
       } catch (error) {

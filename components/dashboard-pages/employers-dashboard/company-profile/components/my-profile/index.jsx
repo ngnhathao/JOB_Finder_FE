@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import FormInfoBox from "./FormInfoBox";
 import LogoCoverUploader from "./LogoCoverUploader";
 import { useRouter } from 'next/navigation';
+import { companyProfileService } from '@/services/companyProfileService';
 
 const Index = () => {
     const router = useRouter();
@@ -88,35 +89,34 @@ const Index = () => {
             }
 
             try {
-                const response = await fetch(`https://localhost:7266/api/CompanyProfile/${userId}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log("Fetched company profile data:", data);
-                    setInitialProfileData(data);
-                    setCompanyProfileData(prevState => ({
-                        ...prevState,
-                        formData: {
-                            companyName: data.companyName || "",
-                            phone: data.contact || "",
-                            website: data.website || "",
-                            teamSize: data.teamSize || "50 - 100",
-                            location: data.location || "",
-                            industryId: data.industryId || "",
-                            aboutCompany: data.companyProfileDescription || "",
-                        },
-                    }));
-                    if (data.urlCompanyLogo) setLogoPreviewUrl(data.urlCompanyLogo);
-                    if (data.imageLogoLgr) setCoverPreviewUrl(data.imageLogoLgr);
+                const data = await companyProfileService.getCompanyProfile(userId);
+                console.log("Fetched company profile data:", data);
+                setInitialProfileData(data);
+                setCompanyProfileData(prevState => ({
+                    ...prevState,
+                    formData: {
+                        companyName: data.companyName || "",
+                        phone: data.contact || "",
+                        website: data.website || "",
+                        teamSize: data.teamSize || "50 - 100",
+                        location: data.location || "",
+                        industryId: data.industryId || "",
+                        aboutCompany: data.companyProfileDescription || "",
+                    },
+                }));
+                if (data.urlCompanyLogo) setLogoPreviewUrl(data.urlCompanyLogo);
+                if (data.imageLogoLgr) setCoverPreviewUrl(data.imageLogoLgr);
 
-                    setHasUnsavedChanges(false);
+                setHasUnsavedChanges(false);
 
-                } else if (response.status === 404) {
-                    console.log("No existing company profile found.");
-                } else {
-                    console.error('Failed to fetch company profile:', response.status);
-                }
             } catch (error) {
                 console.error('Error fetching company profile:', error);
+                // Check for 404 specifically for initial load scenarios
+                if (error.response && error.response.status === 404) {
+                    console.log("No existing company profile found.");
+                } else {
+                    console.error('Failed to fetch company profile:', error);
+                }
             } finally {
                 setIsLoading(false);
             }
@@ -295,30 +295,49 @@ const Index = () => {
         }
 
         try {
-            const method = initialProfileData ? 'PUT' : 'POST';
-            const url = initialProfileData ? `https://localhost:7266/api/CompanyProfile/${userId}` : 'https://localhost:7266/api/CompanyProfile';
+            const payload = {
+                CompanyName: formData.companyName,
+                Contact: formData.phone,
+                Website: formData.website,
+                Location: formData.location,
+                TeamSize: formData.teamSize,
+                IndustryId: parseInt(formData.industryId),
+                CompanyProfileDescription: formData.aboutCompany,
+            };
 
-            const response = await fetch(url, {
-                method: method,
-                body: apiFormData,
-            });
-
-            if (response.ok) {
-                console.log('Company profile saved successfully!');
-                setNotificationMessage("Company profile saved successfully.");
-                setShowNotification(true);
-                setIsEditing(false);
-                setHasUnsavedChanges(false);
-                await fetchCompanyProfile();
-                return true;
-            } else {
-                const errorText = await response.text();
-                console.error('Failed to save company profile:', response.status, errorText);
-                return false;
+            const userId = localStorage.getItem('userId');
+            if (!userId) {
+                toast.error("User ID not found.");
+                return;
             }
+
+            setIsSaving(true);
+            setConfirmLoading(true);
+
+            const response = await companyProfileService.updateCompanyProfile(userId, payload);
+
+            console.log('Profile update response:', response);
+            toast.success("Profile updated successfully!");
+            setShowSuccessModal(true);
+            setIsEditing(false);
+            setHasUnsavedChanges(false);
+            setInitialProfileData(response); // Update initial data with saved data
         } catch (error) {
-            console.error('Error saving company profile:', error);
-            return false;
+            console.error('Error saving profile:', error);
+            if (error.response && error.response.data && error.response.data.errors) {
+                const apiErrors = error.response.data.errors;
+                const newValidationErrors = {};
+                for (const key in apiErrors) {
+                    newValidationErrors[key.toLowerCase()] = apiErrors[key][0];
+                }
+                setValidationErrors(newValidationErrors);
+                toast.error("Validation errors occurred.");
+            } else {
+                toast.error("Failed to save profile.");
+            }
+        } finally {
+            setIsSaving(false);
+            setConfirmLoading(false);
         }
     };
 

@@ -1,26 +1,27 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Modal, Form, Input, Button, message, Select } from "antd";
 import axios from "axios";
+import { industryService } from "@/services/industryService";
+import { userService } from "@/services/userService";
 
 const BecomeRecruiterModal = ({ open, onCancel, userId }) => {
   const [form] = Form.useForm();
-  const [loading, setLoading] = React.useState(false);
-  const [provinces, setProvinces] = React.useState([]);
-  const [industries, setIndustries] = React.useState([]);
-  const [requestSent, setRequestSent] = React.useState(false);
+  const [loading, setLoading] = useState(true);
+  const [provinces, setProvinces] = useState([]);
+  const [industries, setIndustries] = useState([]);
+  const [requestSent, setRequestSent] = useState(false);
+  const [error, setError] = useState(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) {
       fetch('https://provinces.open-api.vn/api/').then(res => res.json()).then(data => {
         setProvinces(data);
       });
-      fetch('https://localhost:7266/api/Industry').then(res => res.json()).then(data => {
-        setIndustries(data);
-      });
+      fetchIndustries();
     }
   }, [open]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) {
       const userIdLocal = localStorage.getItem('userId');
       if (userIdLocal && localStorage.getItem('recruiterRequestSent_' + userIdLocal) === '1') {
@@ -28,6 +29,18 @@ const BecomeRecruiterModal = ({ open, onCancel, userId }) => {
       }
     }
   }, [open]);
+
+  const fetchIndustries = async () => {
+    try {
+      const data = await industryService.getAll();
+      setIndustries(data);
+    } catch (err) {
+      console.error("Error fetching industries:", err);
+      setError("Failed to load industries");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleOk = async () => {
     try {
@@ -45,17 +58,21 @@ const BecomeRecruiterModal = ({ open, onCancel, userId }) => {
         industryId: Number(values.industryId),
       };
       console.log('Payload gửi lên API:', payload);
-      await axios.post("https://localhost:7266/api/CandidateToCompany/request", payload);
+      await userService.requestBecomeRecruiter(payload);
       message.success("Request sent successfully!");
       form.resetFields();
       setRequestSent(true);
       if (userIdLocal) localStorage.setItem('recruiterRequestSent_' + userIdLocal, '1');
     } catch (err) {
-      message.error("Failed to send request");
+      console.error("Error submitting request:", err);
+      message.error("Failed to submit request");
     } finally {
       setLoading(false);
     }
   };
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>{error}</div>;
 
   return (
     <Modal

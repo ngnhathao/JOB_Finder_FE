@@ -19,6 +19,8 @@ import { jobService } from "../../../services/jobService";
 import { toast } from "react-toastify";
 import Cookies from 'js-cookie';
 import { useRouter } from "next/navigation";
+import { companyService } from "@/services/companyService";
+import { industryService } from "@/services/industryService";
 
 const FilterTopBox = () => {
   const {
@@ -47,19 +49,8 @@ const FilterTopBox = () => {
   useEffect(() => {
     const fetchIndustries = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const res = await fetch("https://localhost:7266/api/Industry", {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          throw new Error(errorData.message || `HTTP error! status: ${res.status}`);
-        }
-        const industriesData = await res.json();
-        setIndustries(industriesData);
+        const data = await industryService.getAll();
+        setIndustries(data);
       } catch (err) {
         console.error("Error fetching industries:", err);
         setError(err.message || "Failed to fetch industries");
@@ -75,71 +66,37 @@ const FilterTopBox = () => {
         setLoading(true);
         setError(null);
 
-        const params = new URLSearchParams();
-        if (keyword) params.append("CompanyName", keyword);
-        if (location) params.append("Location", location);
-        // Add other filters if supported by the API, based on your FilterSidebar state/components
-        if (industry && industry !== "") params.append("IndustryId", industry);
-        if (companySize && companySize !== "") params.append("TeamSize", companySize); // Changed from CompanySize to TeamSize
-
-        // Add pagination parameters (assuming API supports page and limit)
-        const page = Math.floor(perPage.start / (perPage.end - perPage.start + 1)) + 1; // Calculate page number
-        const limit = perPage.end - perPage.start + 1; // Calculate limit
-
-        // Adjust page and limit calculation if perPage logic is different
-        let currentLimit = 10; // Default limit
-        let currentPage = 1; // Default page
+        let currentLimit = 10;
+        let currentPage = 1;
 
         if (perPage.end !== 0) {
-            currentLimit = perPage.end - perPage.start; // Assuming perPage.start and end define the slice
-            // Note: This pagination logic based on slice is unusual for APIs.
-            // It might be better to send current page and items per page if API supports.
-            // For now, adapting to the current Redux state structure.
-            currentPage = Math.floor(perPage.start / currentLimit) + 1;
+          currentLimit = perPage.end - perPage.start;
+          currentPage = Math.floor(perPage.start / currentLimit) + 1;
         } else {
-             currentLimit = totalCompanies || 20; // If 'All', try to get total or use a large number
+          currentLimit = totalCompanies || 20;
         }
 
-        params.append("page", currentPage);
-        params.append("limit", currentLimit);
+        const filterParams = {
+          keyword,
+          location,
+          industry,
+          companySize,
+          page: currentPage,
+          limit: currentLimit
+        };
 
-        // Add sort parameter if supported by the API
-        // if (sort) params.append("SortBy", sort); // Assuming sort value maps to API parameter
-
-        console.log('Fetching companies with params:', params.toString());
-        const url = `https://localhost:7266/api/CompanyProfile/filter?${params.toString()}`;
-        console.log('Fetching URL:', url); // Log the full URL
-        const res = await fetch(url, {
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-        });
-
-        console.log('Response status:', res.status); // Log response status
-        if (!res.ok) throw new Error(`Failed to fetch companies: ${res.status}`);
-
-        const data = await res.json();
-        console.log('API Response Data:', data); // Log the full response data
-
-        // *** CORRECTLY handle API response format (assuming it's a direct array) ***
-        if (Array.isArray(data)) { // If API returns a direct array
-            setCompanies(data); // Set companies directly from the array
-            setTotalCompanies(data.length); // Total is the array length
-            console.log('API returned a direct array.', data);
-        } else { // Handle unexpected response format
-            console.error('Unexpected API response format:', data);
-            setError('Unexpected data format from API');
-            setCompanies([]);
-            setTotalCompanies(0);
-        }
-
-        console.log('Companies state updated (should be async):', companies); // Log state (async)
-        console.log('TotalCompanies state updated (should be async):', totalCompanies); // Log state (async)
+        console.log('Fetching companies with params:', filterParams);
+        const result = await companyService.filterCompanies(filterParams);
+        
+        setCompanies(result.data);
+        setTotalCompanies(result.totalCount);
+        
+        console.log('Companies fetched:', result.data);
+        console.log('Total companies:', result.totalCount);
 
       } catch (err) {
         console.error("Error fetching companies:", err);
-        setError('Failed to fetch companies');
+        setError(err.message || 'Failed to fetch companies');
         setCompanies([]);
         setTotalCompanies(0);
       } finally {
@@ -148,7 +105,7 @@ const FilterTopBox = () => {
     };
 
     fetchCompanies();
-  }, [keyword, location, destination, industry, foundationDate, sort, perPage, companySize]); // Add all filter dependencies
+  }, [keyword, location, industry, companySize, perPage, totalCompanies]);
 
   // Lấy token helper
   const getToken = () => {
